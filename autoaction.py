@@ -13,6 +13,7 @@ import re
 from PIL import Image, ImageGrab
 import os
 import subprocess
+import argparse
 
 # Configure logging
 logging.basicConfig(
@@ -797,25 +798,43 @@ class PCAutomation:
 
 # Example usage
 def main():
-    # Create automation instance
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description='Run automated actions based on image recognition')
+    parser.add_argument('action_file', nargs='?', default='example_action_list.txt',
+                      help='Path to action list file (default: example_action_list.txt)')
+    parser.add_argument('--images_path', default='images/notepad',
+                      help='Path to images folder (default: images/notepad)')
+    
+    args = parser.parse_args()
+
+    # Create automation instance with custom or default paths
     auto = PCAutomation(
         confidence_threshold=0.8,
         action_delay=0.5,
         mouse_move_duration=0.5,
         max_retries=3,
-        images_folder = 'images/example',
-        stop_on_failure=True  # Enable stop on failure
+        images_folder=args.images_path,
+        stop_on_failure=True
     )
     
-    # Example action list
-    action_list = "example_action_list.txt"
+    try:
+        # Read actions from file
+        with open(args.action_file, 'r') as f:
+            action_list = f.read()
 
-    # Execute the actions
-    results = auto.execute_action_list(action_list)
-    
-    # Print results
-    for i, result in enumerate(results):
-        logging.info(f"Action {i + 1}: {'Success' if result.success else 'Failed'} - {result.message}")
+        # Execute the actions
+        results = auto.execute_action_list(action_list)
+        
+        # Print results
+        for i, result in enumerate(results):
+            logging.info(f"Action {i + 1}: {'Success' if result.success else 'Failed'} - {result.message}")
+
+    except FileNotFoundError:
+        logging.error(f"File not found: {args.action_file}")
+        sys.exit(1)
+    except Exception as e:
+        logging.error(f"Error executing actions: {str(e)}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
