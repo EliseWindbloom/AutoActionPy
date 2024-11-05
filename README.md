@@ -82,7 +82,7 @@ click btn_save.png
 
 ## ⚠️ Tips
 
-- Use high-quality, distinctive screenshots for reliable recognition
+- Use high-quality, distinctive screenshots (save as lossless PNG files) for reliable recognition
 - Test your automation scripts with the emergency stop key (ESC) ready
 - Start with simple actions and build up to more complex sequences
 - Adjust timing using wait commands if needed
