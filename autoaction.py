@@ -808,27 +808,7 @@ def main():
     )
     
     # Example action list
-    action_list = """
-    #---Opens a new notepad, types in it and saves it to a file named newfile.txt
-    # Navigate to a menu
-    run notepad.exe
-    wait notepad_new.png
-    click notepad_textarea.png
-
-    # Type in notepad
-    type_text "Hello world!"
-
-    # open save window
-    click menu_file.png menu_save_as.png
-    click menu_save_as.png btn_save.png
-    
-    # Type save filename
-    type_text "hello world.txt"
-    
-    # Take a full screenshot and clicks on save
-    screenshot "result.png" full
-    click btn_save.png
-    """
+    action_list = "example_action_list.txt"
 
     # Execute the actions
     results = auto.execute_action_list(action_list)
