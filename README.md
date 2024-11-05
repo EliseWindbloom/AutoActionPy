@@ -24,10 +24,20 @@ pip install pyautogui pillow opencv-python keyboard numpy
 
 ## 📝 Usage
 
-1. Create an action list file (e.g., my_actions.txt) with your automation commands
-2. Run the automation:
+To run the example:
 ```
 python autoaction.py
+```
+
+To run with your own action file:  
+  1. Create an action list file (e.g., my_actions.txt) with your automation commands
+  2. Run this command in command line:
+```
+python autoaction.py my_actions.txt
+```  
+  2b. You can also set the folder to look for images in:
+```
+python autoaction.py my_actions.txt --images_path path/to/images/folder
 ```
 
 ## Example Action List
