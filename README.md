@@ -8,7 +8,7 @@ You will probably have to replace the images in the example folder for this to w
 - **Image-Based Automation**: Finds and interacts with UI elements using image recognition
 - **Mouse Actions**: Move, click, double-click, right-click, and drag operations
 - **Keyboard Input**: Type text and simulate keyboard shortcuts
-- **Flexible Commands**: Wait for images, take screenshots, run programs
+- **Flexible Commands**: Wait for images on-screen, take screenshots, run programs
 - **Emergency Stop**: Press 'ESC' to stop automation at any time
 - **Conditional Actions**: Execute actions based on presence/absence of images
 
