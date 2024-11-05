@@ -58,9 +58,9 @@ click menu_save_as.png
 # Type save filename
 type_text "hello world.txt"
 
-# Take a full screenshot and clicks on save
+# Take a full screenshot and saves file
 screenshot "result.png" full
-click btn_save.png
+type_text {enter}
 ```
 
 ## Available Commands
