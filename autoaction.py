@@ -803,7 +803,7 @@ def main():
         action_delay=0.5,
         mouse_move_duration=0.5,
         max_retries=3,
-        images_folder = 'images/notepad',
+        images_folder = 'images/example',
         stop_on_failure=True  # Enable stop on failure
     )
     
