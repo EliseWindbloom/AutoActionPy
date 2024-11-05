@@ -76,7 +76,7 @@ click btn_save.png
 
 ## 📸 Creating Image Assets
 
-1. Use a screenshot tool like [Greenshot](https://getgreenshot.org/downloads/) which can save regions of the screen as png files.Capture the UI elements/things you want the mouse to move to.
+1. Use a screenshot tool like [Greenshot](https://getgreenshot.org/downloads/) which can save regions of the screen as png files. Capture the UI elements/things you want the mouse to move to.
 2. Save images in the images folder.
 3. Reference images in your action list by filename.
 
