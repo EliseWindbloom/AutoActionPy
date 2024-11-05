@@ -29,8 +29,8 @@ click notepad_textarea.png
 type_text "Hello world!"
 
 # open save window
-click menu_file.png menu_save_as.png
-click menu_save_as.png btn_save.png
+click menu_file.png
+click menu_save_as.png
 
 # Type save filename
 type_text "hello world.txt"
