@@ -77,7 +77,7 @@ class DemonstrationRecorder:
         self.mouse_listener = None
         self.keyboard_buffer = []
         self.last_key_time = 0
-        self.key_buffer_timeout = 1.0  # seconds
+        self.key_buffer_timeout = 3.0  # seconds
         
         # For duplicate detection
         self.image_hashes = set()
@@ -122,11 +122,11 @@ class DemonstrationRecorder:
         self.current_keys.clear()
         self.image_hashes.clear()
         
-        # Register keyboard hook for ctrl key
+        # Register keyboard hooks for all keys
+        keyboard.on_press(self._on_key_event)  # Add this line
         keyboard.on_press_key('ctrl', self._on_ctrl_press)
         
-        # We don't need mouse click listener anymore
-        # Just mouse position listener
+        # Mouse position listener
         self.mouse_listener = mouse.Listener(
             on_move=self._on_move
         )
@@ -169,29 +169,51 @@ class DemonstrationRecorder:
 
     def _on_key_event(self, event):
         """Handle keyboard events"""
-        if not self.is_recording or not event.event_type == keyboard.KEY_DOWN:
+        if not self.is_recording or self.is_paused:
             return
             
         # Ignore recording control keys
-        if event.name in (self.start_key, self.stop_key, self.emergency_key):
+        if event.name in (self.start_key, self.stop_key, self.emergency_key, self.pause_key):
             return
-            
-        # Add key to current sequence
-        self.current_keys.append(event.name)
+
+        # List of special keys that should be wrapped in curly braces
+        special_keys = {
+            'ctrl', 'shift', 'alt', 'enter', 'backspace', 'delete', 'tab',
+            'up', 'down', 'left', 'right', 'home', 'end', 'pageup', 'pagedown',
+            'insert', 'escape', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 
+            'f7', 'f8', 'f9', 'f10', 'f11', 'f12'
+        }
+
+        # Format the key based on its type
+        if event.name in special_keys:
+            key_text = f"{{{event.name}}}"
+        elif event.name == 'space':
+            key_text = " "  # Just use a space character
+        else:
+            key_text = event.name  # Regular character keys
+
+        # Add to current sequence
+        self.current_keys.append(key_text)
+        current_time = time.time()
         
-        # Check if we should flush the key sequence
-        if time.time() - self.last_action_time > 1.0:
+        # Flush if enough time has passed since last key
+        if current_time - self.last_key_time > self.key_buffer_timeout:
             self._flush_key_sequence()
-            
-        self.last_action_time = time.time()
+        
+        self.last_key_time = current_time
+        self.last_action_time = current_time
 
     def _flush_key_sequence(self):
-        """Save current key sequence as an action"""
+        """Process and clear the current key sequence"""
         if not self.current_keys:
             return
-            
+
+        # Join the keys into a single text command
+        text = ''.join(self.current_keys)
+        
+        # Create a KeyAction object with timestamp
         self.key_actions.append(KeyAction(
-            keys=self.current_keys.copy(),
+            keys=[text],
             timestamp=time.time()
         ))
         self.current_keys.clear()
@@ -257,6 +279,7 @@ class DemonstrationRecorder:
             
             # Restore mouse position and click
             pyautogui.moveTo(x, y, duration=0)
+            time.sleep(0.1)
             pyautogui.click(x=x, y=y, button=button)
             
         finally:
@@ -380,7 +403,7 @@ class DemonstrationRecorder:
                 
             # Add action with appropriate formatting
             if action_type == 'click':
-                button_comment = f" # {action.button} click"
+                button_comment = ""#f" # {action.button} click"
                 actions.append(f"click {action.filename}{button_comment}")
             else:
                 key_str = ' '.join(action.keys)
