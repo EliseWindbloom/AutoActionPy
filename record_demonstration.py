@@ -110,7 +110,7 @@ class DemonstrationRecorder:
             
         self.is_paused = not self.is_paused
         logging.info(f"Recording {'paused' if self.is_paused else 'resumed'}")
-        
+            
     def _start_recording(self):
         """Start a new recording session"""
         self.is_recording = True
@@ -122,17 +122,18 @@ class DemonstrationRecorder:
         self.current_keys.clear()
         self.image_hashes.clear()
         
-        # Start mouse listener
+        # Register keyboard hook for ctrl key
+        keyboard.on_press_key('ctrl', self._on_ctrl_press)
+        
+        # We don't need mouse click listener anymore
+        # Just mouse position listener
         self.mouse_listener = mouse.Listener(
-            on_click=self._on_click,
             on_move=self._on_move
         )
         self.mouse_listener.start()
         
-        # Register keyboard hook
-        keyboard.hook(self._on_key_event)
-        
         logging.info("Recording started")
+        logging.info("Press CTRL to record a left mouse button press.")
         
     def _stop_recording(self):
         """Stop recording and process results"""
@@ -195,22 +196,14 @@ class DemonstrationRecorder:
         ))
         self.current_keys.clear()
             
-    def _on_click(self, x, y, button, pressed):
-        """Handle mouse clicks"""
-        if not self.is_recording or self.is_paused or not pressed:
+    def _on_ctrl_press(self, _):
+        """Handle ctrl key press"""
+        if not self.is_recording or self.is_paused:
             return
             
-        # Convert button to string format
-        button_str = str(button).split('.')[-1]
-        
-        # Flush any pending key sequence
-        self._flush_key_sequence()
-        
-        try:
-            self._capture_click(x, y, button_str)
-            self.last_action_time = time.time()
-        except Exception as e:
-            logging.error(f"Error capturing click: {str(e)}")
+        # Get current mouse position
+        x, y = pyautogui.position()
+        self._capture_click(x, y, "left")
             
     def _on_move(self, x, y):
         """Handle mouse movement"""
@@ -224,15 +217,16 @@ class DemonstrationRecorder:
         """Capture screen region around click with improved handling"""
         # Store original mouse position
         original_pos = pyautogui.position()
+        screen_size = pyautogui.size()
         
         try:
-            # Move mouse out of the way (to screen corner)
-            screen_width = win32api.GetSystemMetrics(win32con.SM_CXSCREEN)
-            screen_height = win32api.GetSystemMetrics(win32con.SM_CYSCREEN)
-            win32api.SetCursorPos((screen_width - 1, screen_height - 1))
+            # Move mouse out of the way (near corner but not at corner)
+            safe_x = screen_size[0] - 10  # 10 pixels from right edge
+            safe_y = screen_size[1] - 10  # 10 pixels from bottom edge
+            pyautogui.moveTo(safe_x, safe_y, duration=0)
             
-            # Small delay to ensure mouse is moved
-            time.sleep(0.1)
+            # Wait for any UI changes that might occur when mouse moves away
+            time.sleep(1)
             
             # Take screenshot
             screen = np.array(ImageGrab.grab())
@@ -261,9 +255,13 @@ class DemonstrationRecorder:
                 timestamp=time.time()
             ))
             
+            # Restore mouse position and click
+            pyautogui.moveTo(x, y, duration=0)
+            pyautogui.click(x=x, y=y, button=button)
+            
         finally:
-            # Restore mouse position
-            win32api.SetCursorPos((original_pos[0], original_pos[1]))
+            # Ensure mouse position is restored even if error occurs
+            pyautogui.moveTo(original_pos[0], original_pos[1], duration=0)
             
     def _calculate_image_hash(self, image: np.ndarray) -> str:
         """Calculate perceptual hash of image for duplicate detection"""
@@ -335,15 +333,15 @@ class DemonstrationRecorder:
                 
                 # Convert to PIL Image for drawing
                 img_pil = Image.fromarray(cropped)
-                draw = ImageDraw.Draw(img_pil)
+                # draw = ImageDraw.Draw(img_pil)
                 
-                # Draw click indicator
-                radius = 10
-                draw.ellipse(
-                    [click_pos[0]-radius, click_pos[1]-radius,
-                     click_pos[0]+radius, click_pos[1]+radius],
-                    outline='red', width=2
-                )
+                # # Draw click indicator
+                # radius = 10
+                # draw.ellipse(
+                #     [click_pos[0]-radius, click_pos[1]-radius,
+                #      click_pos[0]+radius, click_pos[1]+radius],
+                #     outline='red', width=2
+                # )
                 
                 # Save processed image
                 img_path = str(self.images_folder / capture.filename)
