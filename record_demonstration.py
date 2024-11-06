@@ -1,3 +1,4 @@
+# note this script doesn't not currently work correctly!!
 import keyboard
 import pyautogui
 import time
