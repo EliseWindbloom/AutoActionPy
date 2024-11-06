@@ -1,6 +1,6 @@
 # AutoActionPy - Experimental image-based automation
 
-This attempts to make it easier to automate tasks like clicking on various things onscreen. AutoActionPy is a experimental Python-based automation tool that lets you create image-based mouse and keyboard automation scripts. It finds images on your screen and performs actions like mouse movements, clicks, and keyboard inputs automatically. You can create a list of actions in a text file that you wish it to perform.
+This attempts to make it easier to automate tasks like clicking on various things onscreen. AutoActionPy is a experimental Python-based automation tool that lets you create image-based mouse and keyboard automation scripts. It finds images on your screen and performs actions like mouse movements, clicks, and keyboard inputs automatically. You can create a list of actions (macros) in a text file that you wish it to perform.
 You will probably have to replace the images in the example folder for this to work if your notepad looks different on your computer than the images.
 
 ## 🌟 Features
