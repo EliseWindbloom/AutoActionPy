@@ -76,7 +76,9 @@ type_text {enter}
 
 ## 📸 Creating Image Assets
 
-1. Use a screenshot tool like [Greenshot](https://getgreenshot.org/downloads/) which can save regions of the screen as png files. Capture the UI elements/things you want the mouse to move to.
+1. Use a screenshot tool to capture the UI elements/things you want the mouse to move to:
+   - Run `python screenshot_region.py` then press shift to take a screenshot, then drag the mouse to make a rectangle region. This screenshot region will be saved as a png.
+   - Alternately, use a screenshot tool like [Greenshot](https://getgreenshot.org/downloads/) which can save regions of the screen as png files.
 2. Save images in the images folder.
 3. Reference images in your action list by filename.
 
