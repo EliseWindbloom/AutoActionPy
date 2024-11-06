@@ -5,15 +5,15 @@ wait notepad_new.png
 click notepad_textarea.png
 
 # Type in notepad
-type_text "Hello world!"
+type "Hello world!"
 
 # open save window
 click menu_file.png
 click menu_save_as.png
 
 # Type save filename
-type_text "hello world.txt"
+type "hello world.txt"
 
 # Take a full screenshot and saves file
 screenshot "result.png" full
-type_text {enter}
+type {enter}
