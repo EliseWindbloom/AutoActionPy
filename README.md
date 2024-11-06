@@ -49,18 +49,18 @@ wait notepad_new.png
 click notepad_textarea.png
 
 # Type in notepad
-type_text "Hello world!"
+type "Hello world!"
 
 # open save window
 click menu_file.png
 click menu_save_as.png
 
 # Type save filename
-type_text "hello world.txt"
+type "hello world.txt"
 
 # Take a full screenshot and saves file
 screenshot "result.png" full
-type_text {enter}
+type {enter}
 ```
 
 ## Available Commands
@@ -68,7 +68,7 @@ type_text {enter}
 -  run <program> - Launch a program
 -  wait <image> - Wait for image to appear
 -  click <image> - Click on image
--  type_text "text" - Type text
+-  type "text" - Type text
 -  screenshot "filename.png" [full] - Take screenshot
 -  move_to <image> - Move mouse to image
 -  drag_to <image> - Drag from current position to image
