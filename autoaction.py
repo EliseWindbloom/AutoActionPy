@@ -91,7 +91,7 @@ class PCAutomation:
             'click': lambda *args: self.click(*args, button="left"),
             'click_right': lambda *args: self.click(*args, button="right"),
             'click_middle': lambda *args: self.click(*args, button="middle"),
-            'type_text': self.type_text,
+            'type': self.type_text,
             'check_state': self.check_state,
             'wait': self.wait,
             'press_key': self.press_key,
@@ -465,9 +465,9 @@ class PCAutomation:
         Regular text outside braces will be typed normally
         
         Examples:
-            type_text "The ctrl key"  # Types the word "ctrl"
-            type_text "{ctrl+m}"      # Presses ctrl+m keys
-            type_text "Press {ctrl+c} to copy"  # Types "Press " then presses ctrl+c then types " to copy"
+            type "The ctrl key"  # Types the word "ctrl"
+            type "{ctrl+m}"      # Presses ctrl+m keys
+            type "Press {ctrl+c} to copy"  # Types "Press " then presses ctrl+c then types " to copy"
         """
         try:
             # Split text into regular text and key combinations
