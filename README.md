@@ -122,7 +122,7 @@ Note:
    - Run `python screenshot_region.py` then press shift to take a screenshot, then drag the mouse to make a rectangle region. This screenshot region will be saved as a png.
    - Alternately, use a screenshot tool like [Greenshot](https://getgreenshot.org/downloads/) which can also save regions of the screen as png files.
    - Alternately, press printscreen to take full screenshots on your pc, then open something like Paint, then paste and crop the image. Save as a png file.
-2. Save images in the images folder.
+2. Save images in a folder inside the project directory.
 3. Reference images in your action list by filename.
 
 ## 💡 Tips
