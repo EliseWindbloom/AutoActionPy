@@ -79,7 +79,7 @@ class DemonstrationRecorder:
         
         # Create output folders
         self.output_folder.mkdir(parents=True, exist_ok=True)
-        self.images_folder.mkdir(parents=True, exist_ok=True)
+        #self.images_folder.mkdir(parents=True, exist_ok=True)
         
         # Initialize screenshot counter
         self.screenshot_counter = 0
