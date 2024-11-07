@@ -1,4 +1,4 @@
-# note this script doesn't not currently work correctly!!
+# version 6
 import keyboard
 import pyautogui
 import time
@@ -64,6 +64,8 @@ class DemonstrationRecorder:
         self.mouse_left_trigger = mouse_left_trigger
         self.mouse_left_trigger_manual = mouse_left_trigger_manual
         self.running = False
+        self.keyboard_hooks = []
+        self.current_keyboard_hook = None
 
         # Recording state
         self.is_recording = False
@@ -107,19 +109,46 @@ class DemonstrationRecorder:
         logging.info(f"Press {self.emergency_key} for emergency stop")
         
         try:
-            # Register all hotkeys
-            keyboard.on_press_key(self.start_key, self._toggle_recording)
-            keyboard.on_press_key(self.pause_key, self._toggle_pause)
-            keyboard.on_press_key(self.emergency_key, self._emergency_stop)
-            keyboard.on_press_key(self.mouse_left_trigger_manual, self._handle_shift_press)
+            # Store these hooks so we can clean them up later
+            self.keyboard_hooks = [
+                keyboard.on_press_key(self.start_key, self._toggle_recording),
+                keyboard.on_press_key(self.pause_key, self._toggle_pause),
+                keyboard.on_press_key(self.emergency_key, self._emergency_stop),
+                keyboard.on_press_key(self.mouse_left_trigger_manual, self._handle_shift_press)
+            ]
             
-            # Use a while loop that can be interrupted
             self.running = True
             while self.running:
-                time.sleep(0.1)  # Reduce CPU usage
+                time.sleep(0.1)
                 
         finally:
-            keyboard.unhook_all()
+            self._cleanup_all_resources()
+
+    def _cleanup_all_resources(self):
+        """Clean up all resources and hooks"""
+        # Stop mouse listener
+        if self.mouse_listener:
+            self.mouse_listener.stop()
+            self.mouse_listener = None
+
+        # Remove current recording hook
+        if self.current_keyboard_hook:
+            keyboard.unhook(self.current_keyboard_hook)
+            self.current_keyboard_hook = None
+
+        # Remove all stored keyboard hooks
+        for hook in self.keyboard_hooks:
+            try:
+                keyboard.unhook(hook)
+            except:
+                pass
+        self.keyboard_hooks.clear()
+
+        # Clean up GUI if needed
+        self._cleanup_gui()
+
+        # Final keyboard cleanup
+        keyboard.unhook_all()
 
     def _toggle_recording(self, _):
         """Toggle recording state"""
@@ -147,8 +176,8 @@ class DemonstrationRecorder:
         self.current_keys.clear()
         self.image_hashes.clear()
         
-        # Register keyboard hooks for all keys
-        keyboard.on_press(self._on_key_event)
+        # Store the hook so we can remove it later
+        self.current_keyboard_hook = keyboard.on_press(self._on_key_event)
         keyboard.on_press_key(self.mouse_left_trigger, self._on_ctrl_press)
         
         # Mouse position listener
@@ -174,7 +203,11 @@ class DemonstrationRecorder:
         # Stop listeners
         if self.mouse_listener:
             self.mouse_listener.stop()
-        keyboard.unhook_all()
+            self.mouse_listener = None
+
+        if self.current_keyboard_hook:
+            keyboard.unhook(self.current_keyboard_hook)
+            self.current_keyboard_hook = None
         
         # Flush any remaining key sequence
         self._flush_key_sequence()
@@ -195,7 +228,9 @@ class DemonstrationRecorder:
             self._stop_recording()
         else:
             logging.info("ESC pressed while not recording - exiting script")
-        self.running = False  # Signal the main loop to stop
+            self.running = False
+            self._cleanup_all_resources()
+            sys.exit(0)
 
     def _on_key_event(self, event):
         """Handle keyboard events"""
