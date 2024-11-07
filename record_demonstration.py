@@ -1,4 +1,4 @@
-# version 6
+# version 10
 import keyboard
 import pyautogui
 import time
@@ -164,6 +164,15 @@ class DemonstrationRecorder:
             
         self.is_paused = not self.is_paused
         logging.info(f"Recording {'paused' if self.is_paused else 'resumed'}")
+
+    def _create_recording_folder(self):
+        """Create a new dated folder for this recording session"""
+        timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
+        session_folder = self.output_folder / timestamp
+        session_folder.mkdir(parents=True, exist_ok=True)
+        self.images_folder = session_folder / "images"
+        self.images_folder.mkdir(exist_ok=True)
+        return session_folder
             
     def _start_recording(self):
         """Start a new recording session"""
@@ -175,6 +184,9 @@ class DemonstrationRecorder:
         self.key_actions.clear()
         self.current_keys.clear()
         self.image_hashes.clear()
+
+        # Create new session folder
+        self.current_session_folder = self._create_recording_folder()
         
         # Store the hook so we can remove it later
         self.current_keyboard_hook = keyboard.on_press(self._on_key_event)
@@ -629,7 +641,7 @@ class DemonstrationRecorder:
             last_time = timestamp
         
         # Write action list
-        with open(self.output_folder / "actions.txt", "w") as f:
+        with open(self.current_session_folder / "actions.txt", "w") as f:
             f.write("\n".join(actions))
 
 if __name__ == "__main__":
