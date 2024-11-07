@@ -96,8 +96,8 @@ Actions can be made conditional by adding `if` and `if_not` parameters to allow 
 - `click image.png if_not blocker.png` - Only click if the image blocker.png is NOT present
 - `type "text" if prompt.png` - Only type if prompt is visible
 
-## 🎥 Recording Automation Script
-`record_demonstration.py` is a tool that lets you create automation scripts by recording your actions instead of writing them manually, as well as take cropped screenshots. 
+## 🎥 Recording Action Lists Automatically
+`record_demonstration.py` is a tool that lets you create action lists by recording your actions while also taking cropped screenshots. 
 It is kind of like a "smart recorder" that watches what you do and turns it into a script that AutoActionPy (autoaction.py) can replay later.
 Type what you want recorded normally, but for mouse clicks to be captured, press either CTRL (automatic cropped screenshot) or SHIFT (manual screenshot region selecting) to simulate left mouse clicks.
 To record your own automation:
