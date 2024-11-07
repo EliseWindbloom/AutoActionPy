@@ -16,7 +16,7 @@ You will probably have to replace the images in the example folder for this to w
 - **Action Recording**: Record mouse clicks and keyboard inputs to generate automation scripts
 - **Duplicate Detection**: Smart handling of repeated images during recording
 - **Enhanced Mouse Actions**: Support for middle-click and relative mouse movements
-- **Advanced Keyboard Support**: Better handling of key combinations and special keys
+- **Advanced Keyboard Support**: Handling of key combinations and special keys
 
 ## 🚀 Installation
 
