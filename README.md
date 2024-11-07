@@ -11,7 +11,7 @@ You will probably have to replace the images in the example folder for this to w
 - **Flexible Commands**: Wait for images on-screen, take screenshots, run programs
 - **Emergency Stop**: Press 'ESC' to stop automation at any time
 - **Conditional Actions**: Execute actions based on presence/absence of images
-- **Dual Search Modes**: Normal (precise) and Aggressive (more tolerant) image matching
+- **Dual Search Modes**: Normal (precise) and Experimental (more tolerant) image matching
 - **Manual Region Selection**: Shift-triggered manual region selection for more precise automation
 - **Action Recording**: Record mouse clicks and keyboard inputs to generate automation scripts
 - **Duplicate Detection**: Smart handling of repeated images during recording
@@ -65,7 +65,7 @@ type "hello world.txt"
 
 # Take a full screenshot and saves file
 screenshot "result.png"
-type "{enter}"
+click btn_save.png
 ```
 
 ## Available Commands
@@ -82,7 +82,7 @@ type "{enter}"
 - `move_between <image1> <image2> [percentage]` - Move to point between two images
 - `drag_to <image>` - Drag from current position to image
 - `drag_between <image1> <image2> [percentage]` - Drag between two images
-- `search_mode normal|aggressive` - Set image matching precision
+- `search_mode normal|experimental` - Set image matching precision
 - `jump_to <image>` - Instantly move to image
 - `press_key <key>` - Press a keyboard key
 - `screenshot "savename.png"` - Take screenshot
@@ -127,7 +127,7 @@ Note:
 
 ## 💡 Tips
 
-- Use `search_mode aggressive` when needed for finding more dynamic elements (note is it more likely to find the image, but it is also more likely to find false positives when the image doesn't exists onscreen)
+- `search_mode` is always normal by default and is recommended, but you can try `search_mode experimental` which tries mutliple search methods but is more likely to fail/get false positives
 - Manual region selection (SHIFT) provides more precise targeting
 - Key combinations can be typed using {key} format: {ctrl+c}, {shift+tab}
 - Wait commands support multiple images: `wait image1.png or image2.png`
