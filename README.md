@@ -71,9 +71,9 @@ type "{enter}"
 ## Available Commands
 
 - `click [image]` - Move to and Left click on image, use current position if no image given
-- `click_right [image]` - Right click on image, use current position if no image given
-- `click_middle [image]` - Middle click on image, use current position if no image given
-- `double_click [image]` - Double click (with left mouse button) on image, use current position if no image given
+- `click_right [image]` - Move to and Right click on image, use current position if no image given
+- `click_middle [image]` - Move to and Middle click on image, use current position if no image given
+- `double_click [image]` - Move to and Double click (with left mouse button) on image, use current position if no image given
 - `wait <image> [timeout]` - Wait for image to appear
 - `wait <seconds>` - Wait for specified seconds
 - `type "text"` - Type text (supports {key} combinations)
