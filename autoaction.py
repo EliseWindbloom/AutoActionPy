@@ -1,4 +1,4 @@
-# version 8
+# version 9
 import pyautogui
 import time
 import logging
@@ -68,6 +68,8 @@ class PCAutomation:
         self.last_matched_region = None
         self.images_folder = images_folder
         self.stop_on_failure = stop_on_failure
+
+        self.search_mode = "normal" #normal or aggressive
         
         # Create images folder if it doesn't exist
         Path(images_folder).mkdir(parents=True, exist_ok=True)
@@ -102,6 +104,7 @@ class PCAutomation:
             'scroll': self.scroll,
             'screenshot': self.take_screenshot,
             'run': self.run_program,  # New action for running programs
+            'search_mode': self.set_search_mode,  # Add this line
         }
 
     def _emergency_stop(self):
@@ -118,8 +121,29 @@ class PCAutomation:
             
         # Otherwise, assume it's in the images folder
         return os.path.join(self.images_folder, image_name)
+    
+    def set_search_mode(self, mode: str) -> ActionResult:
+        """
+        Set the image search mode to either 'normal' or 'aggressive'
+        """
+        mode = mode.lower()
+        if mode not in ["normal", "aggressive"]:
+            return ActionResult(False, f"Invalid search mode: {mode}. Use 'normal' or 'aggressive'")
+            
+        self.search_mode = mode
+        return ActionResult(True, f"Search mode set to: {mode}")
                 
+
     def _find_image(self,
+                    template_path: str,
+                    region: Optional[Tuple[int, int, int, int]] = None,
+                    confidence: Optional[float] = None) -> ActionResult:
+            #selects which function to use based on current search mode
+            if self.search_mode == "aggressive":
+                return self._find_image_aggressive(template_path,region,confidence)
+            return self._find_image_normal(template_path,region,confidence)
+
+    def _find_image_normal(self,
                     template_path: str,
                     region: Optional[Tuple[int, int, int, int]] = None,
                     confidence: Optional[float] = None) -> ActionResult:
@@ -300,6 +324,126 @@ class PCAutomation:
 
         except Exception as e:
             return ActionResult(False, f"Error in template matching: {str(e)}")
+
+    def _find_image_aggressive(self,
+                         template_path: str,
+                         region: Optional[Tuple[int, int, int, int]] = None,
+                         confidence: Optional[float] = None) -> ActionResult:
+        """
+        Aggressive image finding that uses multiple matching methods from robust_image_detection.py
+        """
+        try:
+            # Load and verify template
+            full_path = self._get_image_path(template_path)
+            template = cv2.imread(str(full_path), cv2.IMREAD_UNCHANGED)
+            if template is None:
+                return ActionResult(False, f"Failed to load template: {full_path}")
+            
+            # Prepare template image (standardize format)
+            if template.shape[-1] == 4:  # Has alpha channel
+                template = cv2.cvtColor(template, cv2.COLOR_BGRA2BGR)
+            elif len(template.shape) == 2:  # Grayscale
+                template = cv2.cvtColor(template, cv2.COLOR_GRAY2BGR)
+            
+            # Ensure template is in uint8 format
+            if template.dtype != 'uint8':
+                template = (template / template.max() * 255).astype('uint8')
+
+            # Take screenshot using PIL for consistency
+            screen = np.array(ImageGrab.grab(bbox=region))
+            screen = cv2.cvtColor(screen, cv2.COLOR_RGB2BGR)
+            if screen is None:
+                return ActionResult(False, "Failed to capture screen")
+
+            # Handle region
+            if region:
+                x, y, w, h = region
+                screen = screen[y:y+h, x:x+w]
+
+            # Preprocess both images with Gaussian blur
+            screen_processed = cv2.GaussianBlur(screen, (3,3), 0)
+            template_processed = cv2.GaussianBlur(template, (3,3), 0)
+
+            matches = []
+            template_height, template_width = template.shape[:2]
+
+            # Try multiple matching methods in same order as original
+            methods = [
+                cv2.TM_CCOEFF_NORMED,
+                cv2.TM_CCORR_NORMED,
+                cv2.TM_SQDIFF_NORMED
+            ]
+
+            conf_threshold = confidence if confidence is not None else self.confidence_threshold
+
+            for method in methods:
+                result = cv2.matchTemplate(
+                    screen_processed, 
+                    template_processed, 
+                    method
+                )
+
+                # Handle different comparison methods
+                if method == cv2.TM_SQDIFF_NORMED:
+                    match_values = 1 - result
+                else:
+                    match_values = result
+
+                # Find matches above confidence threshold
+                locations = np.where(match_values >= conf_threshold)
+                
+                for pt in zip(*locations[::-1]):
+                    x, y = pt
+                    conf = match_values[y, x]
+                    
+                    # Calculate center coordinates
+                    x_center = x + template_width // 2
+                    y_center = y + template_height // 2
+                    
+                    # Add region offset if specified
+                    if region:
+                        x_center += region[0]
+                        y_center += region[1]
+                    
+                    # Check for duplicates using same threshold as original
+                    is_duplicate = False
+                    for existing_match in matches:
+                        if (abs(x_center - existing_match[0]) <= 10 and 
+                            abs(y_center - existing_match[1]) <= 10):
+                            is_duplicate = True
+                            break
+                    
+                    if not is_duplicate:
+                        matches.append((x_center, y_center, float(conf)))
+                        break  # Only take first match per method
+
+                if matches:  # If we found a match with this method, try next method
+                    break
+
+            if matches:
+                # Sort by confidence and take best match
+                matches.sort(key=lambda x: x[2], reverse=True)
+                best_match = matches[0]
+                
+                # Update last matched region
+                self.last_matched_region = (
+                    best_match[0] - template_width//2,
+                    best_match[1] - template_height//2,
+                    template_width,
+                    template_height
+                )
+                
+                return ActionResult(
+                    True,
+                    f"Match found with confidence {best_match[2]:.3f}",
+                    (best_match[0], best_match[1]),
+                    screen
+                )
+
+            return ActionResult(False, f"No confident match found for {template_path}")
+
+        except Exception as e:
+            return ActionResult(False, f"Error in aggressive template matching: {str(e)}")
 
 
     def move_to(self, *args) -> ActionResult:
@@ -489,6 +633,7 @@ class PCAutomation:
     def check_state(self, image_path: str) -> ActionResult:
         """Check if an image exists on screen"""
         return self._find_image(image_path)
+    
     
     def _wait_for_images(self, image_paths: List[str], timeout: Optional[float] = None) -> ActionResult:
         """
