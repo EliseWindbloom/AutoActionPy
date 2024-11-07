@@ -8,14 +8,16 @@ import cv2
 import numpy as np
 from pathlib import Path
 import logging
+from tkinter import *
 from PIL import Image, ImageGrab
+from PIL import ImageDraw, ImageTk
 import os
 import sys
 from pynput import mouse
 import win32gui
 import win32con
 import win32api
-from PIL import ImageDraw
+
 
 # Configure logging
 logging.basicConfig(
@@ -36,6 +38,7 @@ class ScreenCapture:
     button: str
     filename: str
     timestamp: float
+    is_manually_cropped: bool = False
     
 @dataclass
 class KeyAction:
@@ -45,12 +48,13 @@ class KeyAction:
 
 class DemonstrationRecorder:
     def __init__(self, 
-                 output_folder: str = "recorded_demo",
+                 output_folder: str = "recorded",
                  start_key: str = "f9",
                  stop_key: str = "f9",
                  pause_key: str = "f10",
                  emergency_key: str = "esc",
-                 mouse_left_trigger: str = "ctrl"):
+                 mouse_left_trigger: str = "ctrl",
+                 mouse_left_trigger_manual: str = "shift"):
         """Initialize the demonstration recorder"""
         self.output_folder = Path(output_folder)
         self.images_folder = self.output_folder / "images"
@@ -58,7 +62,9 @@ class DemonstrationRecorder:
         self.stop_key = stop_key
         self.emergency_key = emergency_key
         self.mouse_left_trigger = mouse_left_trigger
-        
+        self.mouse_left_trigger_manual = mouse_left_trigger_manual
+        self.running = False
+
         # Recording state
         self.is_recording = False
         self.last_action_time = 0
@@ -84,6 +90,14 @@ class DemonstrationRecorder:
         
         # For duplicate detection
         self.image_hashes = set()
+
+        # For manual screenshot from selected region
+        self.root = None
+        self.canvas = None
+        self.current_rectangle = None
+        self.start_x = None 
+        self.start_y = None
+        self.selected_region = None
         
     def start(self):
         """Start the recording process"""
@@ -92,12 +106,20 @@ class DemonstrationRecorder:
         logging.info(f"Press {self.pause_key} to pause/resume")
         logging.info(f"Press {self.emergency_key} for emergency stop")
         
-        # Register all hotkeys
-        keyboard.on_press_key(self.start_key, self._toggle_recording)
-        keyboard.on_press_key(self.pause_key, self._toggle_pause)
-        keyboard.on_press_key(self.emergency_key, self._emergency_stop)
-        
-        keyboard.wait()
+        try:
+            # Register all hotkeys
+            keyboard.on_press_key(self.start_key, self._toggle_recording)
+            keyboard.on_press_key(self.pause_key, self._toggle_pause)
+            keyboard.on_press_key(self.emergency_key, self._emergency_stop)
+            keyboard.on_press_key(self.mouse_left_trigger_manual, self._handle_shift_press)
+            
+            # Use a while loop that can be interrupted
+            self.running = True
+            while self.running:
+                time.sleep(0.1)  # Reduce CPU usage
+                
+        finally:
+            keyboard.unhook_all()
 
     def _toggle_recording(self, _):
         """Toggle recording state"""
@@ -137,7 +159,9 @@ class DemonstrationRecorder:
         
         logging.info("Recording started")
         mouse_key = (self.mouse_left_trigger).upper()
-        logging.info(f"Press {mouse_key} to record a left mouse button press.")
+        logging.info(f"Press {mouse_key} to record a left mouse button press, with AUTOMATIC region capture.")
+        mouse_key = (self.mouse_left_trigger_manual).upper()
+        logging.info(f"Press {mouse_key} to record a left mouse button press, with MANUAL region selection.")
         
     def _stop_recording(self):
         """Stop recording and process results"""
@@ -169,7 +193,9 @@ class DemonstrationRecorder:
         if self.is_recording:
             logging.warning("Emergency stop triggered!")
             self._stop_recording()
-        sys.exit(0)
+        else:
+            logging.info("ESC pressed while not recording - exiting script")
+        self.running = False  # Signal the main loop to stop
 
     def _on_key_event(self, event):
         """Handle keyboard events"""
@@ -180,7 +206,7 @@ class DemonstrationRecorder:
 
         # Ignore recording control keys
         if event.name in (self.start_key, self.stop_key, self.emergency_key, self.pause_key,
-                    self.mouse_left_trigger):
+                    self.mouse_left_trigger, self.mouse_left_trigger_manual):
             return
         
         # Always ensure sequence_start_time is set
@@ -239,6 +265,141 @@ class DemonstrationRecorder:
         # Get current mouse position
         x, y = pyautogui.position()
         self._capture_click(x, y, "left")
+
+    def _handle_shift_press(self, _):
+        """Handle manual region selection (shift)"""
+        if not self.is_recording or self.is_paused or self.root:
+            return
+
+        x, y = pyautogui.position()
+        screen_size = pyautogui.size()
+        original_pos = (x, y)
+
+        try:
+            # Move mouse out of way
+            pyautogui.moveTo(screen_size[0] - 10, screen_size[1] - 10, duration=0)
+            time.sleep(0.1)
+            
+            # Take full screenshot
+            screen = np.array(ImageGrab.grab())
+            
+            # Restore mouse position
+            pyautogui.moveTo(original_pos[0], original_pos[1], duration=0)
+
+            # Show region selection GUI
+            self._show_region_selector(screen, original_pos)
+
+        except Exception as e:
+            logging.error(f"Error in shift handler: {str(e)}")
+            self._cleanup_gui()
+
+    def _show_region_selector(self, screen, original_pos):
+        """Show region selection GUI"""
+        try:
+            self.root = Tk()
+            self.root.attributes('-fullscreen', True)
+            self.root.attributes('-alpha', 1.0)
+            self.root.withdraw()
+
+            # Create gray overlay
+            screen_pil = Image.fromarray(screen)
+            gray_overlay = Image.new('RGBA', screen_pil.size, (128, 128, 128, 10))
+            tinted_screen = Image.alpha_composite(screen_pil.convert('RGBA'), gray_overlay)
+            
+            # Setup canvas
+            self.screenshot = ImageTk.PhotoImage(tinted_screen)
+            self.canvas = Canvas(
+                self.root,
+                width=self.root.winfo_screenwidth(),
+                height=self.root.winfo_screenheight(),
+                highlightthickness=0
+            )
+            self.canvas.pack()
+            self.canvas.create_image(0, 0, image=self.screenshot, anchor=NW)
+
+            # Bind events
+            self.canvas.bind("<Button-1>", self._on_mouse_down)
+            self.canvas.bind("<B1-Motion>", self._on_mouse_drag)
+            self.canvas.bind("<ButtonRelease-1>", lambda e: self._on_mouse_up(e, screen, original_pos))
+            self.root.bind("<Escape>", self._cleanup_gui)
+
+            # Show window
+            self.root.deiconify()
+            self.root.attributes('-topmost', True)
+            self.root.focus_force()
+            self.root.mainloop()
+
+        except Exception as e:
+            logging.error(f"Error in region selector: {str(e)}")
+            self._cleanup_gui()
+
+    def _on_mouse_down(self, event):
+        """Handle mouse down in region selector"""
+        self.start_x = event.x
+        self.start_y = event.y
+        
+        if self.current_rectangle:
+            self.canvas.delete(self.current_rectangle)
+        self.current_rectangle = self.canvas.create_rectangle(
+            self.start_x, self.start_y, self.start_x, self.start_y,
+            outline='blue', width=2
+        )
+
+    def _on_mouse_drag(self, event):
+        """Handle mouse drag in region selector"""
+        if self.current_rectangle:
+            self.canvas.coords(
+                self.current_rectangle,
+                self.start_x, self.start_y,
+                event.x, event.y
+            )
+
+    def _on_mouse_up(self, event, screen, original_pos):
+        """Handle mouse up in region selector"""
+        try:
+            if self.start_x is None or self.start_y is None:
+                return
+
+            x1 = min(self.start_x, event.x)
+            y1 = min(self.start_y, event.y)
+            x2 = max(self.start_x, event.x)
+            y2 = max(self.start_y, event.y)
+
+            # Crop the region
+            region = screen[y1:y2, x1:x2]
+            
+            # Create capture with manual crop flag
+            self._create_capture(region, original_pos[0], original_pos[1], "left", True)
+            
+            # For manual region captures, add extra delay and focus handling
+            #time.sleep(0.5)  # Allow time for tkinter window to fully close
+            #win32gui.SetForegroundWindow(win32gui.GetDesktopWindow())# Force window focus to background
+            #time.sleep(0.1)  # Small delay after focus change
+
+            # Simulate click at original position
+            #pyautogui.click(x=original_pos[0], y=original_pos[1])
+
+        except Exception as e:
+            logging.error(f"Error in mouse up handler: {str(e)}")
+        finally:
+            self._cleanup_gui()
+            time.sleep(0.1)  # Small delay after focus change
+            # Simulate click at original position
+            pyautogui.click(x=original_pos[0], y=original_pos[1])
+
+    def _cleanup_gui(self, event=None):
+        """Clean up GUI resources"""
+        if self.root:
+            try:
+                self.root.quit()
+                self.root.destroy()
+            except:
+                pass
+            self.root = None
+            self.canvas = None
+            self.current_rectangle = None
+            self.start_x = None
+            self.start_y = None
             
     def _on_move(self, x, y):
         """Handle mouse movement"""
@@ -353,31 +514,40 @@ class DemonstrationRecorder:
                 
         return best_region or (max(0, x-75), max(0, y-75), 150, 150)
         
+    def _create_capture(self, image, x, y, button, is_manual=False):
+        """Create a new capture entry"""
+        self.screenshot_counter += 1
+        filename = f"click_{self.screenshot_counter}_{button}.png"
+        
+        self.captures.append(ScreenCapture(
+            image=image,
+            mouse_x=x,
+            mouse_y=y,
+            button=button,
+            filename=filename,
+            timestamp=time.time(),
+            is_manually_cropped=is_manual
+        ))
+
     def _process_captures(self):
-        """Process and optimize captured images with improved handling"""
+        """Modified to respect manual cropping flag"""
         processed_captures = []
         
         for capture in self.captures:
             try:
-                # Find unique region centered on THIS capture's click position
-                region = self._find_unique_region(capture)
-                
-                # Crop image to region using THIS capture's specific coordinates
-                cropped = capture.image[
-                    region[1]:region[1]+region[3],
-                    region[0]:region[0]+region[2]
-                ]
-                
-                # Generate unique filename for THIS capture's cropped image
-                # Even if captures share the same full screenshot
-                self.screenshot_counter += 1
-                unique_filename = f"click_{self.screenshot_counter}_{capture.button}.png"
-                capture.filename = unique_filename  # Update filename
-                
-                # Convert to PIL Image
+                if not capture.is_manually_cropped:
+                    # Find unique region only for automatic captures
+                    region = self._find_unique_region(capture)
+                    cropped = capture.image[
+                        region[1]:region[1]+region[3],
+                        region[0]:region[0]+region[2]
+                    ]
+                else:
+                    # Use the manually selected region as-is
+                    cropped = capture.image
+
+                # Save image
                 img_pil = Image.fromarray(cropped)
-                
-                # Save THIS capture's cropped image
                 img_path = str(self.images_folder / capture.filename)
                 img_pil.save(img_path, 'PNG', optimize=True)
                 
