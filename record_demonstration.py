@@ -80,6 +80,7 @@ class DemonstrationRecorder:
         self.keyboard_buffer = []
         self.last_key_time = 0
         self.key_buffer_timeout = 3.0  # seconds
+        self.sequence_start_time = None
         
         # For duplicate detection
         self.image_hashes = set()
@@ -175,14 +176,20 @@ class DemonstrationRecorder:
         if not self.is_recording or self.is_paused:
             return
         
-        # Update timing first
         current_time = time.time()
-        self.last_action_time = current_time
-            
+
+        # If this is the first key in sequence, store its timestamp
+        if not self.current_keys:
+            self.sequence_start_time = current_time
+        
         # Ignore recording control keys
         if event.name in (self.start_key, self.stop_key, self.emergency_key, self.pause_key,
                     self.mouse_left_trigger):
             return
+        
+        # Flush existing sequence if enough time has passed AND we have keys to flush
+        if self.current_keys and current_time - self.last_key_time > self.key_buffer_timeout:
+            self._flush_key_sequence(current_time)  # Pass the timestamp
 
         # List of special keys that should be wrapped in curly braces
         special_keys = {
@@ -196,22 +203,17 @@ class DemonstrationRecorder:
         if event.name in special_keys:
             key_text = f"{{{event.name}}}"
         elif event.name == 'space':
-            key_text = " "  # Just use a space character
+            key_text = " "
         else:
-            key_text = event.name  # Regular character keys
+            key_text = event.name
 
         # Add to current sequence
         self.current_keys.append(key_text)
-        current_time = time.time()
-        
-        # Flush if enough time has passed since last key
-        if current_time - self.last_key_time > self.key_buffer_timeout:
-            self._flush_key_sequence()
         
         self.last_key_time = current_time
         self.last_action_time = current_time
 
-    def _flush_key_sequence(self):
+    def _flush_key_sequence(self, timestamp=None):
         """Process and clear the current key sequence"""
         if not self.current_keys:
             return
@@ -219,12 +221,13 @@ class DemonstrationRecorder:
         # Join the keys into a single text command
         text = ''.join(self.current_keys)
         
-        # Create a KeyAction object with timestamp
+        # Create a KeyAction object with the provided timestamp or sequence start time
         self.key_actions.append(KeyAction(
             keys=[text],
-            timestamp=time.time()
+            timestamp=getattr(self, 'sequence_start_time', time.time())
         ))
         self.current_keys.clear()
+        self.sequence_start_time = None  # Reset the sequence start time
             
     def _on_ctrl_press(self, _):
         """Handle left mouse triggering (ctrl by default) key press"""
@@ -244,10 +247,7 @@ class DemonstrationRecorder:
         pass
         
     def _capture_click(self, x: int, y: int, button: str):
-        # Update timing first
-        current_time = time.time()
-        self.last_action_time = current_time
-
+        current_time = time.time()  # Capture timestamp immediately
         # Store original mouse position
         original_pos = pyautogui.position()
         screen_size = pyautogui.size()
@@ -266,33 +266,34 @@ class DemonstrationRecorder:
             # Calculate image hash
             img_hash = self._calculate_image_hash(screen)
             
-            # Generate filename, either new or reuse existing
+            # Generate filename
             self.screenshot_counter += 1
             filename = f"click_{self.screenshot_counter}_{button}.png"
             
-            # If duplicate, find the existing filename
+            # Handle duplicate detection
             if img_hash in self.image_hashes:
                 logging.info("Reusing existing image")
-                # Find the capture with matching hash and use its filename
                 for existing_capture in self.captures:
                     if self._calculate_image_hash(existing_capture.image) == img_hash:
                         filename = existing_capture.filename
                         break
             else:
-                # New unique image, add to hashes
                 self.image_hashes.add(img_hash)
                 
-            # Store capture data (always store the action)
+            # Store capture data with current timestamp
             self.captures.append(ScreenCapture(
                 image=screen,
                 mouse_x=x,
                 mouse_y=y,
                 button=button,
                 filename=filename,
-                timestamp=time.time()
+                timestamp=current_time  # Use current timestamp
             ))
             
-            # Always restore position and click
+            # Update last action time after everything is done
+            self.last_action_time = current_time  # Move this here
+            
+            # Restore position and click
             pyautogui.moveTo(x, y, duration=0)
             time.sleep(0.1)
             pyautogui.click(x=x, y=y, button=button)
@@ -401,21 +402,20 @@ class DemonstrationRecorder:
         ]
         
         last_time = self.wait_start_time
-        last_action_type = None
         
-        # Combine and sort all actions
+        # Combine and sort all actions by timestamp
         all_actions = (
             [(c.timestamp, 'click', c) for c in self.captures] +
             [(k.timestamp, 'keys', k) for k in self.key_actions]
         )
-        all_actions.sort()
+        all_actions.sort(key=lambda x: x[0])  # Sort by timestamp
         
         for timestamp, action_type, action in all_actions:
-            # Only add wait if:
-            # 1. There's a significant pause (>= buffer timeout)
-            # 2. We're not in the middle of a typing sequence
+            # Calculate wait time from last action
             wait_time = timestamp - last_time
-            if wait_time >= self.key_buffer_timeout and last_action_type != 'keys':
+            
+            # Add wait if significant pause (>= 0.5 seconds)
+            if wait_time >= self.key_buffer_timeout:
                 actions.append(f"wait {wait_time:.1f}")
                 
             # Add action with appropriate formatting
@@ -426,15 +426,10 @@ class DemonstrationRecorder:
                 actions.append(f'type "{key_str}"')
                 
             last_time = timestamp
-            last_action_type = action_type
-            
-        # Write action list with error handling
-        try:
-            with open(self.output_folder / "actions.txt", "w") as f:
-                f.write("\n".join(actions))
-        except Exception as e:
-            logging.error(f"Error saving action list: {str(e)}")
-            raise
+        
+        # Write action list
+        with open(self.output_folder / "actions.txt", "w") as f:
+            f.write("\n".join(actions))
 
 if __name__ == "__main__":
     try:
