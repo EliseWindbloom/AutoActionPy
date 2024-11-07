@@ -85,8 +85,8 @@ type "{enter}"
 - `search_mode normal|aggressive` - Set image matching precision
 - `jump_to <image>` - Instantly move to image
 - `press_key <key>` - Press a keyboard key
-- `screenshot "filename.png"` - Take screenshot
-- `screenshot_region "filename.png"` - Take screenshot of last region (take full screenshot if not available)
+- `screenshot "savename.png"` - Take screenshot
+- `screenshot_region "savename.png"` - Take screenshot of last region (take full screenshot if not available)
 - `run <program>` - Launch a program
 
 ## 🎯 Conditional Commands
