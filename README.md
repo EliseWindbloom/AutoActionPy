@@ -64,34 +64,28 @@ click menu_save_as.png
 type "hello world.txt"
 
 # Take a full screenshot and saves file
-screenshot "result.png" full
+screenshot "result.png"
 type "{enter}"
 ```
 
 ## Available Commands
 
--  `run <program>` - Launch a program
--  `wait <image>` - Wait for image to appear
--  `click <image>` - Click on image
--  `type "text"` - Type text
--  `screenshot "filename.png" [full]` - Take screenshot
--  `move_to <image>` - Move mouse to image
--  `drag_to <image>` - Drag from current position to image
-- `search_mode normal|aggressive` - Set image matching precision
-- `move_to <image>` - Move mouse to image
-- `move_between <image1> <image2> [percentage]` - Move to point between two images
-- `jump_to <image>` - Instantly move to image
-- `click <image>` - Left click on image
-- `click_right <image>` - Right click on image
-- `click_middle <image>` - Middle click on image
-- `double_click <image>` - Double click on image
-- `type "text"` - Type text (supports {key} combinations)
+- `click [image]` - Move to and Left click on image, click at current position if no image given
+- `click_right [image]` - Right click on image, click at current position if no image given
+- `click_middle [image]` - Middle click on image, click at current position if no image given
+- `double_click [image]` - Double click (with left mouse button) on image, click at current position if no image given
 - `wait <image> [timeout]` - Wait for image to appear
 - `wait <seconds>` - Wait for specified seconds
-- `press_key <key>` - Press a keyboard key
+- `type "text"` - Type text (supports {key} combinations)
+- `move_to <image>` - Move mouse to image
+- `move_between <image1> <image2> [percentage]` - Move to point between two images
 - `drag_to <image>` - Drag from current position to image
-- `drag_between <image1> <image2>` - Drag between two images
-- `screenshot "filename.png" [full]` - Take screenshot
+- `drag_between <image1> <image2> [percentage]` - Drag between two images
+- `search_mode normal|aggressive` - Set image matching precision
+- `jump_to <image>` - Instantly move to image
+- `press_key <key>` - Press a keyboard key
+- `screenshot "filename.png"` - Take screenshot
+- `screenshot_region "filename.png"` - Take screenshot of last region (take full screenshot if not available)
 - `run <program>` - Launch a program
 
 ## 🎯 Conditional Commands
