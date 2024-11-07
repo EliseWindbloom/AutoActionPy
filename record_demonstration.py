@@ -227,7 +227,7 @@ class DemonstrationRecorder:
         self.current_keys.clear()
             
     def _on_ctrl_press(self, _):
-        """Handle ctrl key press"""
+        """Handle left mouse triggering (ctrl by default) key press"""
         if not self.is_recording or self.is_paused:
             return
             
