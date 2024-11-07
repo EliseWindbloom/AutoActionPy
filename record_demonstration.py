@@ -537,11 +537,15 @@ class DemonstrationRecorder:
         best_uniqueness = 0
         
         for size in range(min_size, max_size + step, step):
+            # Calculate width and height with width starting out twice as wide as height
+            width = size * 2
+            height = size
+            
             # Calculate region bounds with centering
-            x1 = max(0, x - size//2)
-            y1 = max(0, y - size//2)
-            x2 = min(screen.shape[1], x1 + size)
-            y2 = min(screen.shape[0], y1 + size)
+            x1 = max(0, x - width // 2)
+            y1 = max(0, y - height // 2)
+            x2 = min(screen.shape[1], x1 + width)
+            y2 = min(screen.shape[0], y1 + height)
             
             region = screen[y1:y2, x1:x2]
             
@@ -556,12 +560,13 @@ class DemonstrationRecorder:
             
             if uniqueness > best_uniqueness:
                 best_uniqueness = uniqueness
-                best_region = (x1, y1, x2-x1, y2-y1)
+                best_region = (x1, y1, x2 - x1, y2 - y1)
                 
             if uniqueness > 0.5:  # Good enough threshold
                 break
                 
-        return best_region or (max(0, x-75), max(0, y-75), 150, 150)
+        return best_region or (max(0, x - 75), max(0, y - 75), 150, 150)
+
         
     def _create_capture(self, image, x, y, button, is_manual=False):
         """Create a new capture entry"""
