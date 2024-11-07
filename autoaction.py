@@ -1,5 +1,7 @@
-# Version 10
-# Made by Elise Windbloom
+# Auto Action py
+# By Elise Windbloom
+# Version 11 - Added far faster and higher quality image detection
+# v10 - First stable version
 import pyautogui
 import time
 import logging
@@ -70,7 +72,7 @@ class PCAutomation:
         self.images_folder = images_folder
         self.stop_on_failure = stop_on_failure
 
-        self.search_mode = "normal" #normal or aggressive
+        self.search_mode = "normal" #normal or experimental
         self.screenshots_path = Path("recorded/screenshots")
         # Create folder if it doesn't exist
         self.screenshots_path.mkdir(parents=True, exist_ok=True)
@@ -125,11 +127,11 @@ class PCAutomation:
     
     def set_search_mode(self, mode: str) -> ActionResult:
         """
-        Set the image search mode to either 'normal' or 'aggressive'
+        Set the image search mode to either 'normal' or 'experimental'
         """
         mode = mode.lower()
-        if mode not in ["normal", "aggressive"]:
-            return ActionResult(False, f"Invalid search mode: {mode}. Use 'normal' or 'aggressive'")
+        if mode not in ["normal", "experimental"]:
+            return ActionResult(False, f"Invalid search mode: {mode}. Use 'normal' or 'experimental'")
             
         self.search_mode = mode
         return ActionResult(True, f"Search mode set to: {mode}")
@@ -138,13 +140,65 @@ class PCAutomation:
     def _find_image(self,
                     template_path: str,
                     region: Optional[Tuple[int, int, int, int]] = None,
-                    confidence: Optional[float] = None) -> ActionResult:
+                    confidence: Optional[float] = 0.7) -> ActionResult:
             #selects which function to use based on current search mode
-            if self.search_mode == "aggressive":
-                return self._find_image_aggressive(template_path,region,confidence)
+            if self.search_mode == "experimental":
+                return self._find_image_experimental(template_path,region,confidence)
             return self._find_image_normal(template_path,region,confidence)
 
+
     def _find_image_normal(self,
+                    template_path: str,
+                    region: Optional[Tuple[int, int, int, int]] = None,
+                    confidence: Optional[float] = 0.7) -> ActionResult:
+        """
+        Find image onscreen
+        """
+        try:
+            method = cv2.TM_CCOEFF_NORMED
+
+            # Load template image
+            full_path = self._get_image_path(template_path)
+            template = cv2.imread(full_path, 0)#cv2.IMREAD_UNCHANGED) # load in grayscale
+            if template is None:
+                return ActionResult(False, f"Failed to load template: {full_path}")
+            h, w = template.shape
+            
+            # Capture screen
+            screen = np.array(ImageGrab.grab(bbox=region))
+            #screen_bgr = cv2.cvtColor(screen, cv2.COLOR_RGB2BGR)
+            screen_gray = cv2.cvtColor(screen, cv2.COLOR_RGB2GRAY)# Convert screen to grayscale
+            
+            result = cv2.matchTemplate(screen_gray, template, method)
+
+            # Get location/score from results
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+            if method in [cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED]:
+                location = min_loc
+                score = min_val  # Lower is better
+            else:
+                location = max_loc
+                score = max_val  # Higher is better
+
+            # Get x and y coordinates of the match
+            x, y = location #gets left/top, not centers
+            center = (x + (w//2), y + (h//2))
+
+            if score >= confidence:
+                # Adjust for region if specified
+                if region:
+                    center = (center[0] + region[0], center[1] + region[1])
+
+                self.last_matched_region = (center[0] - w//2, center[1] - h//2, w, h)
+                return ActionResult(True, f"Match found", center, screen)
+            else:
+                return ActionResult(False, f"No confident match found for {template_path}, best score found = {str(score)}, needed at least = {str(confidence)}")
+
+        except Exception as e:
+            return ActionResult(False, f"Error in template matching: {str(e)}")
+
+
+    def _find_image_unused_original(self,
                     template_path: str,
                     region: Optional[Tuple[int, int, int, int]] = None,
                     confidence: Optional[float] = None) -> ActionResult:
@@ -326,12 +380,12 @@ class PCAutomation:
         except Exception as e:
             return ActionResult(False, f"Error in template matching: {str(e)}")
 
-    def _find_image_aggressive(self,
+    def _find_image_experimental(self,
                          template_path: str,
                          region: Optional[Tuple[int, int, int, int]] = None,
                          confidence: Optional[float] = None) -> ActionResult:
         """
-        Aggressive image finding that uses multiple matching methods from robust_image_detection.py
+        Experimental image finding that uses multiple matching methods
         """
         try:
             # Load and verify template
@@ -444,7 +498,7 @@ class PCAutomation:
             return ActionResult(False, f"No confident match found for {template_path}")
 
         except Exception as e:
-            return ActionResult(False, f"Error in aggressive template matching: {str(e)}")
+            return ActionResult(False, f"Error in experimental template matching: {str(e)}")
 
 
     def move_to(self, *args) -> ActionResult:
