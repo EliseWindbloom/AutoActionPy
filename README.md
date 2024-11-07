@@ -116,8 +116,8 @@ Note:
 - Currently this only captures keyboard key presses, waiting, and left mouse clicks (through pressing either CTRL or SHIFT so simulate mouse click), as well as generate image assets.
 - Actual mouse clicks isn't captured by record_demonstration.py (to help avoid errors), so press CTRL or SHIFT when you want to simulate a mouse click.
 
-## 📸 Creating Image Assets from stratch
-
+## 📸 Creating Image Assets from Stratch
+`record_demonstration.py` can create image assets for you, but if you perfer to do them manually instead, follow these steps:  
 1. Use a screenshot tool to capture the UI elements/things you want the mouse to move to:
    - Run `python screenshot_region.py` then press shift to take a screenshot, then drag the mouse to make a rectangle region. This screenshot region will be saved as a png.
    - Alternately, use a screenshot tool like [Greenshot](https://getgreenshot.org/downloads/) which can also save regions of the screen as png files.
