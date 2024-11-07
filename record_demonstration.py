@@ -178,20 +178,21 @@ class DemonstrationRecorder:
         
         current_time = time.time()
 
-        # If this is the first key in sequence, store its timestamp
-        if not self.current_keys:
-            self.sequence_start_time = current_time
-        
         # Ignore recording control keys
         if event.name in (self.start_key, self.stop_key, self.emergency_key, self.pause_key,
                     self.mouse_left_trigger):
             return
         
+        # Always ensure sequence_start_time is set
+        if not self.sequence_start_time:
+            self.sequence_start_time = current_time
+        
         # Flush existing sequence if enough time has passed AND we have keys to flush
         if self.current_keys and current_time - self.last_key_time > self.key_buffer_timeout:
-            self._flush_key_sequence(current_time)  # Pass the timestamp
+            self._flush_key_sequence()
+            self.sequence_start_time = current_time  # Reset for new sequence
 
-        # List of special keys that should be wrapped in curly braces
+        # Format the key based on its type
         special_keys = {
             'ctrl', 'shift', 'right shift', 'left shift', 'alt', 'enter', 'backspace', 'delete', 'tab',
             'up', 'down', 'left', 'right', 'home', 'end', 'pageup', 'pagedown',
@@ -199,7 +200,6 @@ class DemonstrationRecorder:
             'f7', 'f8', 'f9', 'f10', 'f11', 'f12'
         }
 
-        # Format the key based on its type
         if event.name in special_keys:
             key_text = f"{{{event.name}}}"
         elif event.name == 'space':
@@ -207,9 +207,7 @@ class DemonstrationRecorder:
         else:
             key_text = event.name
 
-        # Add to current sequence
         self.current_keys.append(key_text)
-        
         self.last_key_time = current_time
         self.last_action_time = current_time
 
@@ -221,11 +219,15 @@ class DemonstrationRecorder:
         # Join the keys into a single text command
         text = ''.join(self.current_keys)
         
-        # Create a KeyAction object with the provided timestamp or sequence start time
+        # Use provided timestamp, sequence start time, or current time as fallback
+        action_timestamp = timestamp or self.sequence_start_time or time.time()
+        
+        # Create a KeyAction object with guaranteed timestamp
         self.key_actions.append(KeyAction(
             keys=[text],
-            timestamp=getattr(self, 'sequence_start_time', time.time())
+            timestamp=action_timestamp
         ))
+        
         self.current_keys.clear()
         self.sequence_start_time = None  # Reset the sequence start time
             
@@ -247,6 +249,9 @@ class DemonstrationRecorder:
         pass
         
     def _capture_click(self, x: int, y: int, button: str):
+        # Flush any pending keyboard input first if receives sudden mouse click
+        if self.current_keys:
+            self._flush_key_sequence(self.sequence_start_time)
         current_time = time.time()  # Capture timestamp immediately
         # Store original mouse position
         original_pos = pyautogui.position()
