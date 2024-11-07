@@ -93,12 +93,11 @@ class PCAutomation:
             'click': lambda *args: self.click(*args, button="left"),
             'click_right': lambda *args: self.click(*args, button="right"),
             'click_middle': lambda *args: self.click(*args, button="middle"),
+            'click_double': lambda *args: self.click(*args, button="double"),
             'type': self.type_text,
             'check_state': self.check_state,
             'wait': self.wait,
             'press_key': self.press_key,
-            'double_click': self.double_click,
-            'right_click': self.right_click,
             'drag_to': self.drag_to,
             'drag_between': self.drag_between,
             'scroll': self.scroll,
@@ -568,7 +567,7 @@ class PCAutomation:
             image_path: Path to target image (optional)
             speed: Movement speed in seconds (0 = instant jump)
             if_not: Only click if this image is not found
-            button: Mouse button to click ("left", "right", or "middle")
+            button: Mouse button to click ("left", "right", "middle" or "double")
         """
         try:
             # Check if_not condition
@@ -581,7 +580,8 @@ class PCAutomation:
             click_func = {
                 "left": pyautogui.click,
                 "right": pyautogui.rightClick,
-                "middle": pyautogui.middleClick
+                "middle": pyautogui.middleClick,
+                "double": pyautogui.doubleClick
             }.get(button.lower(), pyautogui.click)  # defaults to left click
             
             if image_path is None:
@@ -712,20 +712,6 @@ class PCAutomation:
             return ActionResult(True, f"Pressed key: {key}")
         except Exception as e:
             return ActionResult(False, f"Failed to press key: {str(e)}")
-
-    def double_click(self, image_path: str) -> ActionResult:
-        """Double click on an image"""
-        result = self._find_image(image_path)
-        if result.success and result.location:
-            pyautogui.doubleClick(result.location[0], result.location[1])
-        return result
-
-    def right_click(self, image_path: str) -> ActionResult:
-        """Right click on an image"""
-        result = self._find_image(image_path)
-        if result.success and result.location:
-            pyautogui.rightClick(result.location[0], result.location[1])
-        return result
 
     def drag_to(self, image_path: str) -> ActionResult:
         """
