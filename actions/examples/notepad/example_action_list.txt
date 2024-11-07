@@ -16,4 +16,4 @@ type "hello world.txt"
 
 # Take a full screenshot and saves file
 screenshot "result.png"
-type "{enter}"
+click btn_save.png
