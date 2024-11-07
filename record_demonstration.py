@@ -1,4 +1,5 @@
-# version 10
+# Version 10
+# Made by Elise Windbloom
 import keyboard
 import pyautogui
 import time
