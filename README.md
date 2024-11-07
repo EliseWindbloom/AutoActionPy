@@ -86,7 +86,7 @@ click btn_save.png
 - `jump_to <image>` - Instantly move to image
 - `press_key <key>` - Press a keyboard key
 - `screenshot "savename.png"` - Take screenshot
-- `screenshot_region "savename.png"` - Take screenshot of last region (take full screenshot if not available)
+- `screenshot_region "savename.png"` - Take screenshot of last region (takes full screenshot if not available)
 - `run <program>` - Launch a program
 
 ## 🎯 Conditional Commands
