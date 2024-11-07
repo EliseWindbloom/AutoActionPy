@@ -40,7 +40,7 @@ To run with your own action file:
 ```
 python autoaction.py my_actions.txt
 ```  
-  2b. You can also set the folder to look for images in:
+  - You can also set the folder to look for images in:
 ```
 python autoaction.py my_actions.txt --images_path path/to/images/folder
 ```
