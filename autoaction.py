@@ -1,4 +1,4 @@
-# version 9
+# version 10
 import pyautogui
 import time
 import logging
@@ -70,9 +70,9 @@ class PCAutomation:
         self.stop_on_failure = stop_on_failure
 
         self.search_mode = "normal" #normal or aggressive
-        
-        # Create images folder if it doesn't exist
-        Path(images_folder).mkdir(parents=True, exist_ok=True)
+        self.screenshots_path = Path("recorded/screenshots")
+        # Create folder if it doesn't exist
+        self.screenshots_path.mkdir(parents=True, exist_ok=True)
         
         # Set up PyAutoGUI
         pyautogui.PAUSE = action_delay
@@ -102,9 +102,10 @@ class PCAutomation:
             'drag_to': self.drag_to,
             'drag_between': self.drag_between,
             'scroll': self.scroll,
-            'screenshot': self.take_screenshot,
+            'screenshot': self.take_fullscreen_screenshot,
+            'screenshot_region': self.take_region_screenshot,
             'run': self.run_program,  # New action for running programs
-            'search_mode': self.set_search_mode,  # Add this line
+            'search_mode': self.set_search_mode, 
         }
 
     def _emergency_stop(self):
@@ -801,31 +802,35 @@ class PCAutomation:
             return ActionResult(True, f"Scrolled by {amount}")
         except Exception as e:
             return ActionResult(False, f"Failed to scroll: {str(e)}")
-
-    def take_screenshot(self, filename: str, *args) -> ActionResult:
-        """
-        Take a screenshot of the last matched region or full screen
         
-        Args:
-            filename: Where to save the screenshot
-            *args: Optional arguments:
-                  'full' - Force a full screen screenshot
-        """
+
+    def take_fullscreen_screenshot(self, filename: str) -> ActionResult:
+        """Take a full screen screenshot"""
         try:
-            # Check if full screenshot is explicitly requested
-            force_full = len(args) > 0 and args[0].lower() == 'full'
-            
-            if force_full or not self.last_matched_region:
-                screenshot = pyautogui.screenshot()
-                screenshot_type = "full screen"
-            else:
-                screenshot = pyautogui.screenshot(region=self.last_matched_region)
-                screenshot_type = "region"
-            
-            screenshot.save(filename)
-            return ActionResult(True, f"{screenshot_type} screenshot saved to {filename}")
+            screenshot = ImageGrab.grab()
+            # Create full path
+            filepath = self.screenshots_path / filename
+            screenshot.save(filepath)
+            return ActionResult(True, f"Saved full screenshot to {filepath}")
         except Exception as e:
             return ActionResult(False, f"Failed to take screenshot: {str(e)}")
+
+    def take_region_screenshot(self, filename: str) -> ActionResult:
+        """Take a screenshot of the last matched region, falls back to full screen"""
+        try:
+            if self.last_matched_region:
+                screenshot = ImageGrab.grab(bbox=self.last_matched_region)
+            else:
+                screenshot = ImageGrab.grab()
+                logging.warning("No region available, taking full screenshot instead")
+            
+            # Create full path
+            filepath = self.screenshots_path / filename
+            screenshot.save(filepath)
+            return ActionResult(True, f"Saved {'region' if self.last_matched_region else 'full'} screenshot to {filepath}")
+        except Exception as e:
+            return ActionResult(False, f"Failed to take screenshot: {str(e)}")
+
 
     def parse_action_list(self, action_list: str) -> List[Tuple[str, List[str], Dict]]:
         """Parse the action list string into a list of (action, args, condition) tuples"""
@@ -945,10 +950,10 @@ class PCAutomation:
 def main():
     # Set up argument parser
     parser = argparse.ArgumentParser(description='Run automated actions based on image recognition')
-    parser.add_argument('action_file', nargs='?', default='example_action_list.txt',
-                      help='Path to action list file (default: example_action_list.txt)')
-    parser.add_argument('--images_path', default='images/notepad',
-                      help='Path to images folder (default: images/notepad)')
+    parser.add_argument('action_file', nargs='?', default='actions/examples/notepad/example_action_list.txt',
+                      help='Path to action list file (default: actions/examples/notepad/example_action_list.txt)')
+    parser.add_argument('--images_path', default='actions/examples/notepad/images',
+                      help='Path to images folder (default: actions/examples/notepad/images)')
     
     args = parser.parse_args()
 
