@@ -15,5 +15,5 @@ click menu_save_as.png
 type "hello world.txt"
 
 # Take a full screenshot and saves file
-screenshot "result.png" full
+screenshot "result.png"
 type "{enter}"
