@@ -359,34 +359,25 @@ class DemonstrationRecorder:
         
         for capture in self.captures:
             try:
-                # Find unique region
+                # Find unique region centered on THIS capture's click position
                 region = self._find_unique_region(capture)
                 
-                # Crop image to region
+                # Crop image to region using THIS capture's specific coordinates
                 cropped = capture.image[
                     region[1]:region[1]+region[3],
                     region[0]:region[0]+region[2]
                 ]
                 
-                # Add visual indicator of click position
-                click_pos = (
-                    capture.mouse_x - region[0],
-                    capture.mouse_y - region[1]
-                )
+                # Generate unique filename for THIS capture's cropped image
+                # Even if captures share the same full screenshot
+                self.screenshot_counter += 1
+                unique_filename = f"click_{self.screenshot_counter}_{capture.button}.png"
+                capture.filename = unique_filename  # Update filename
                 
-                # Convert to PIL Image for drawing
+                # Convert to PIL Image
                 img_pil = Image.fromarray(cropped)
-                # draw = ImageDraw.Draw(img_pil)
                 
-                # # Draw click indicator
-                # radius = 10
-                # draw.ellipse(
-                #     [click_pos[0]-radius, click_pos[1]-radius,
-                #      click_pos[0]+radius, click_pos[1]+radius],
-                #     outline='red', width=2
-                # )
-                
-                # Save processed image
+                # Save THIS capture's cropped image
                 img_path = str(self.images_folder / capture.filename)
                 img_pil.save(img_path, 'PNG', optimize=True)
                 
