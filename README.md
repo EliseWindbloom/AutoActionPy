@@ -100,7 +100,7 @@ Actions can be made conditional by adding `if` and `if_not` parameters to allow 
 `record_demonstration.py` is a tool that lets you create action lists by recording your actions while also taking cropped screenshots. 
 It is kind of like a "smart recorder" that watches what you do and turns it into a script that AutoActionPy (autoaction.py) can replay later.
 Type what you want recorded normally, but for mouse clicks to be captured, press either CTRL (automatic cropped screenshot) or SHIFT (manual screenshot region selecting) to simulate left mouse clicks.
-To use this to record your own automations, run this command in cmd:
+To use this to record your own automations, run this command in cmd:  
 `python record_demonstration.py`  
 
 Recording controls:
