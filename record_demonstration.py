@@ -49,13 +49,15 @@ class DemonstrationRecorder:
                  start_key: str = "f9",
                  stop_key: str = "f9",
                  pause_key: str = "f10",
-                 emergency_key: str = "esc"):
+                 emergency_key: str = "esc",
+                 mouse_left_trigger: str = "ctrl"):
         """Initialize the demonstration recorder"""
         self.output_folder = Path(output_folder)
         self.images_folder = self.output_folder / "images"
         self.start_key = start_key
         self.stop_key = stop_key
         self.emergency_key = emergency_key
+        self.mouse_left_trigger = mouse_left_trigger
         
         # Recording state
         self.is_recording = False
@@ -123,8 +125,8 @@ class DemonstrationRecorder:
         self.image_hashes.clear()
         
         # Register keyboard hooks for all keys
-        keyboard.on_press(self._on_key_event)  # Add this line
-        keyboard.on_press_key('ctrl', self._on_ctrl_press)
+        keyboard.on_press(self._on_key_event)
+        keyboard.on_press_key(self.mouse_left_trigger, self._on_ctrl_press)
         
         # Mouse position listener
         self.mouse_listener = mouse.Listener(
@@ -133,7 +135,8 @@ class DemonstrationRecorder:
         self.mouse_listener.start()
         
         logging.info("Recording started")
-        logging.info("Press CTRL to record a left mouse button press.")
+        mouse_key = (self.mouse_left_trigger).upper()
+        logging.info(f"Press {mouse_key} to record a left mouse button press.")
         
     def _stop_recording(self):
         """Stop recording and process results"""
@@ -171,14 +174,19 @@ class DemonstrationRecorder:
         """Handle keyboard events"""
         if not self.is_recording or self.is_paused:
             return
+        
+        # Update timing first
+        current_time = time.time()
+        self.last_action_time = current_time
             
         # Ignore recording control keys
-        if event.name in (self.start_key, self.stop_key, self.emergency_key, self.pause_key):
+        if event.name in (self.start_key, self.stop_key, self.emergency_key, self.pause_key,
+                    self.mouse_left_trigger):
             return
 
         # List of special keys that should be wrapped in curly braces
         special_keys = {
-            'ctrl', 'shift', 'alt', 'enter', 'backspace', 'delete', 'tab',
+            'ctrl', 'shift', 'right shift', 'left shift', 'alt', 'enter', 'backspace', 'delete', 'tab',
             'up', 'down', 'left', 'right', 'home', 'end', 'pageup', 'pagedown',
             'insert', 'escape', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 
             'f7', 'f8', 'f9', 'f10', 'f11', 'f12'
@@ -236,38 +244,45 @@ class DemonstrationRecorder:
         pass
         
     def _capture_click(self, x: int, y: int, button: str):
-        """Capture screen region around click with improved handling"""
+        # Update timing first
+        current_time = time.time()
+        self.last_action_time = current_time
+
         # Store original mouse position
         original_pos = pyautogui.position()
         screen_size = pyautogui.size()
         
         try:
-            # Move mouse out of the way (near corner but not at corner)
-            safe_x = screen_size[0] - 10  # 10 pixels from right edge
-            safe_y = screen_size[1] - 10  # 10 pixels from bottom edge
+            # Move mouse out of the way
+            safe_x = screen_size[0] - 10
+            safe_y = screen_size[1] - 10
             pyautogui.moveTo(safe_x, safe_y, duration=0)
             
-            # Wait for any UI changes that might occur when mouse moves away
             time.sleep(1)
             
             # Take screenshot
             screen = np.array(ImageGrab.grab())
             
-            # Calculate image hash for duplicate detection
+            # Calculate image hash
             img_hash = self._calculate_image_hash(screen)
             
-            # Skip if duplicate
-            if img_hash in self.image_hashes:
-                logging.info("Skipping duplicate image")
-                return
-                
-            self.image_hashes.add(img_hash)
-            
-            # Generate filename
+            # Generate filename, either new or reuse existing
             self.screenshot_counter += 1
             filename = f"click_{self.screenshot_counter}_{button}.png"
             
-            # Store capture data
+            # If duplicate, find the existing filename
+            if img_hash in self.image_hashes:
+                logging.info("Reusing existing image")
+                # Find the capture with matching hash and use its filename
+                for existing_capture in self.captures:
+                    if self._calculate_image_hash(existing_capture.image) == img_hash:
+                        filename = existing_capture.filename
+                        break
+            else:
+                # New unique image, add to hashes
+                self.image_hashes.add(img_hash)
+                
+            # Store capture data (always store the action)
             self.captures.append(ScreenCapture(
                 image=screen,
                 mouse_x=x,
@@ -277,13 +292,12 @@ class DemonstrationRecorder:
                 timestamp=time.time()
             ))
             
-            # Restore mouse position and click
+            # Always restore position and click
             pyautogui.moveTo(x, y, duration=0)
             time.sleep(0.1)
             pyautogui.click(x=x, y=y, button=button)
             
         finally:
-            # Ensure mouse position is restored even if error occurs
             pyautogui.moveTo(original_pos[0], original_pos[1], duration=0)
             
     def _calculate_image_hash(self, image: np.ndarray) -> str:
@@ -387,6 +401,7 @@ class DemonstrationRecorder:
         ]
         
         last_time = self.wait_start_time
+        last_action_type = None
         
         # Combine and sort all actions
         all_actions = (
@@ -396,20 +411,22 @@ class DemonstrationRecorder:
         all_actions.sort()
         
         for timestamp, action_type, action in all_actions:
-            # Add wait if needed
+            # Only add wait if:
+            # 1. There's a significant pause (>= buffer timeout)
+            # 2. We're not in the middle of a typing sequence
             wait_time = timestamp - last_time
-            if wait_time >= 1.0:
+            if wait_time >= self.key_buffer_timeout and last_action_type != 'keys':
                 actions.append(f"wait {wait_time:.1f}")
                 
             # Add action with appropriate formatting
             if action_type == 'click':
-                button_comment = ""#f" # {action.button} click"
-                actions.append(f"click {action.filename}{button_comment}")
+                actions.append(f"click {action.filename}")
             else:
                 key_str = ' '.join(action.keys)
-                actions.append(f'type_text "{key_str}"')
+                actions.append(f'type "{key_str}"')
                 
             last_time = timestamp
+            last_action_type = action_type
             
         # Write action list with error handling
         try:
