@@ -1,5 +1,6 @@
-# Version 10
+# Record Demonstration py
 # Made by Elise Windbloom
+# Version 11
 import keyboard
 import pyautogui
 import time
@@ -268,9 +269,9 @@ class DemonstrationRecorder:
 
         # Format the key based on its type
         special_keys = {
-            'ctrl', 'shift', 'right shift', 'left shift', 'alt', 'enter', 'backspace', 'delete', 'tab',
-            'up', 'down', 'left', 'right', 'home', 'end', 'pageup', 'pagedown',
-            'insert', 'escape', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 
+            'ctrl', 'left ctrl', 'right ctrl', 'shift', 'right shift', 'left shift', 'alt', 
+            'enter', 'backspace', 'delete', 'tab', 'up', 'down', 'left', 'right', 'home', 'end', 
+            'pageup', 'pagedown', 'insert', 'escape', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 
             'f7', 'f8', 'f9', 'f10', 'f11', 'f12'
         }
 
