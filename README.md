@@ -77,7 +77,7 @@ click btn_save.png
 - `double_click [image]` - Move to and Double click (with left mouse button) on image, use current position if no image given
 - `wait <image> [timeout]` - Wait for image to appear
 - `wait <seconds>` - Wait for specified seconds
-- `wait_file "path/to/folder/*.filetype" [timeout]` - Wait for a file to change/be created in a folder (can be given as a folder path, with optional filetype wildcard or a specific file)
+- `wait_file "path/to/folder/*.filetype" [timeout]` - Wait for a file to change/be created in a folder (can be given as a folder path, with optional filetype wildcard or a specific file), *see below for more info
 - `type "text"` - Type text (supports {key} combinations)
 - `type_file "filename.txt"` - Type the contents of a text file (supports {key} combinations)
 - `move_to <image>` - Move mouse to image
@@ -91,6 +91,13 @@ click btn_save.png
 - `screenshot "savename.png"` - Take screenshot
 - `screenshot_region "savename.png"` - Take screenshot of last region (takes full screenshot if not available)
 - `run <program>` - Launch a program
+
+`wait_file` can be called a few different ways:
+  1) `wait_file "path/to/folder"` - This will wait for any file to change/be created inside that folder
+  2) `wait_file` "path/to/folder/*.wav" - This will wait for any file of the given filetype to change/be created
+  3) `wait_file "path/to/folder/myfile.txt"` - This will wait for the file named myfile.txt to be modified
+  4) `wait_file` also saves two special variables that can be called later by `type`, these are `%LAST_FILENAME%` and `%LAST_FILEPATH%`. You can use them like this:
+    - `type "last file saved was: %LAST_FILENAME%"` and `type "The full filepath was %LAST_FILEPATH%"`  
 
 ## 🎯 Conditional Commands
 
