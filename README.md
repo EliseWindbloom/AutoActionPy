@@ -11,7 +11,7 @@ You will probably have to replace the images in the example folder for this to w
 - **Flexible Commands**: Wait for images on-screen, take screenshots, run programs
 - **Emergency Stop**: Press 'ESC' to stop automation at any time
 - **Conditional Actions**: Execute actions based on presence/absence of images
-- **Dual Search Modes**: Normal (precise) and Experimental (more tolerant) image matching
+- **Three Search Modes**: Normal (precise), Advanced (uses mutliple searching tatics) and Experimental (more tolerant) image matching
 - **Manual Region Selection**: Shift-triggered manual region selection for more precise automation
 - **Action Recording**: Record mouse clicks and keyboard inputs to generate automation scripts
 - **Duplicate Detection**: Smart handling of repeated images during recording
@@ -82,7 +82,7 @@ click btn_save.png
 - `move_between <image1> <image2> [percentage]` - Move to point between two images
 - `drag_to <image>` - Drag from current position to image
 - `drag_between <image1> <image2> [percentage]` - Drag between two images
-- `search_mode normal|experimental` - Set image matching precision
+- `search_mode normal|advanced|experimental` - Set image matching precision
 - `jump_to <image>` - Instantly move to image
 - `press_key <key>` - Press a keyboard key
 - `screenshot "savename.png"` - Take screenshot
