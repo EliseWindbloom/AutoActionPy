@@ -192,7 +192,25 @@ class PCAutomation:
             
         self.search_mode = mode
         return ActionResult(True, f"Search mode set to: {mode}")
-                
+
+    def _process_variables(self, text: str) -> str:
+        """Replace special variables in text with their values"""
+        if not isinstance(text, str):
+            return text
+            
+        replacements = {
+            "%LAST_SUCCESS%": str(self.last_result.success if hasattr(self, 'last_result') else False),
+            "%LAST_X%": str(self.last_matched_region[0] if self.last_matched_region else 0),
+            "%LAST_Y%": str(self.last_matched_region[1] if self.last_matched_region else 0),
+            "%LAST_MESSAGE%": str(self.last_result.message if hasattr(self, 'last_result') else ""),
+            "%LAST_FILENAME%": str(self.last_filename if self.last_filename else ""),
+            "%LAST_FILEPATH%": str(self.last_filepath if self.last_filepath else "")
+        }
+        
+        result = text
+        for var, value in replacements.items():
+            result = result.replace(var, value)
+        return result
 
     def _find_image(self,
                     template_path: str,
@@ -722,27 +740,13 @@ class PCAutomation:
         Type text with support for key combinations and variables
         Format for key combinations: Use curly braces like '{ctrl+m}' or '{ctrl+shift+a}'
         Regular text outside braces will be typed normally
-        Variables: %LAST_FILENAME%, %LAST_FILEPATH%, %LAST_SUCCESS%, %LAST_X%, %LAST_Y%, %LAST_MESSAGE%
         
         Examples:
             type "The ctrl key"  # Types the word "ctrl"
             type "{ctrl+m}"      # Presses ctrl+m keys
             type "Press {ctrl+c} to copy"  # Types "Press " then presses ctrl+c then types " to copy"
         """
-        try:
-            # Replace variables first
-            replacements = {
-                '%LAST_FILENAME%': str(self.last_filename) if self.last_filename else '',
-                '%LAST_FILEPATH%': str(self.last_filepath) if self.last_filepath else '',
-                '%LAST_SUCCESS%': str(self.last_result.success if hasattr(self, 'last_result') else ''),
-                '%LAST_X%': str(self.last_result.location[0] if hasattr(self, 'last_result') and self.last_result.location else ''),
-                '%LAST_Y%': str(self.last_result.location[1] if hasattr(self, 'last_result') and self.last_result.location else ''),
-                '%LAST_MESSAGE%': str(self.last_result.message if hasattr(self, 'last_result') else '')
-            }
-            
-            for var, value in replacements.items():
-                text = text.replace(var, value)
-                
+        try:                
             # Split text into regular text and key combinations
             parts = re.split(r'({[^}]+})', text)
             
@@ -1081,6 +1085,13 @@ class PCAutomation:
                 for action_index, (action_name, args, condition) in enumerate(actions, 1):
                     if not self.running:
                         break
+
+                    # Process variables in condition if it exists
+                    if condition:
+                        condition['image'] = self._process_variables(condition['image'])
+                    # Process variables in arguments
+                    # Variables: %LAST_FILENAME%, %LAST_FILEPATH%, %LAST_SUCCESS%, %LAST_X%, %LAST_Y%, %LAST_MESSAGE%
+                    processed_args = [self._process_variables(arg) for arg in args]
                         
                     # Check condition before executing action
                     if condition:
@@ -1103,11 +1114,11 @@ class PCAutomation:
                             # Enhanced action logging
                             print(f"=== Executing Action - Line {action_index}/{len(actions)} ===")
                             print(f"Action Name: {action_name}")
-                            print(f"Arguments: {args}")
+                            print(f"Arguments: {processed_args}")
                             print(f"Conditions: {condition if condition else 'None'}")
                             print(f"Attempt: {attempt + 1}/{self.max_retries}")
 
-                            result = self.actions[action_name](*args)
+                            result = self.actions[action_name](*processed_args)
                             results.append(result)
 
                             # Enhanced result logging
@@ -1139,7 +1150,6 @@ class PCAutomation:
         except Exception as e:
             return [ActionResult(False, f"Failed to execute action list: {str(e)}")]
 
-# Example usage
 def main():
     # Parse command line arguments
     args = parse_arguments()
@@ -1154,7 +1164,7 @@ def main():
         # Read actions from file
         with open(action_file, 'r') as f:
             action_list = f.read()
-
+        
         # Execute the actions
         results = auto.execute_action_list(action_list)
         
