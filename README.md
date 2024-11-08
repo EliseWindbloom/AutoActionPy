@@ -92,12 +92,29 @@ click btn_save.png
 - `screenshot_region "savename.png"` - Take screenshot of last region (takes full screenshot if not available)
 - `run <program>` - Launch a program
 
-`wait_file` can be called a few different ways:
-  1) `wait_file "path/to/folder"` - This will wait for any file to change/be created inside that folder
-  2) `wait_file` "path/to/folder/*.wav" - This will wait for any file of the given filetype to change/be created
-  3) `wait_file "path/to/folder/myfile.txt"` - This will wait for the file named myfile.txt to be modified
-  4) `wait_file` also saves two special variables that can be called later by `type`, these are `%LAST_FILENAME%` and `%LAST_FILEPATH%`. You can use them like this:
-    - `type "last file saved was: %LAST_FILENAME%"` and `type "The full filepath was %LAST_FILEPATH%"`  
+<details>
+  <summary>`wait_file` can be called a few different ways (click to expand)</summary>
+
+  1) ``wait_file "path/to/folder"`` - This will wait for any file to change/be created inside that folder  
+  2) ``wait_file "path/to/folder/*.wav"`` - This will wait for any file of the given filetype to change/be created  
+  3) ``wait_file "path/to/folder/myfile.txt"`` - This will wait for the file named `myfile.txt` to be modified  
+  4) ``wait_file`` also saves two special variables that can be called later by `type`, these are `%LAST_FILENAME%` and `%LAST_FILEPATH%`. You can use them like this:  
+      - ``type "last file saved was: %LAST_FILENAME%"`` and ``type "The full filepath was %LAST_FILEPATH%"``
+
+</details>
+     
+<details>
+  <summary>`type` has 6 special variables that you can use (click to expand)</summary>
+  
+   1) `%LAST_SUCCESS%` - states if last action was successful (true/false)  
+   2) `%LAST_X%` - last mouse x  
+   3) `%LAST_Y%` - last mouse y  
+   4) `%LAST_MESSAGE%` - last message sent  
+   5) `%LAST_FILENAME%` - filename of last file `wait_file` waited for  
+   6) `%LAST_FILEPATH%` - filepath to last file `wait_file` waited
+</details>
+
+
 
 ## 🎯 Conditional Commands
 
