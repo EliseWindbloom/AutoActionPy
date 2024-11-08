@@ -1,5 +1,3 @@
-cd "C:\Users\lyria\Documents\Scripts\python\automation\auto\"
-
 @echo off
 call venv\Scripts\activate.bat
 
