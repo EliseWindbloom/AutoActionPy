@@ -1,0 +1,21 @@
+# AutoAction.py settings
+autoaction:
+  images_folder: "actions/examples/notepad/images" # Path to image folder for custom action lists
+  screenshots_folder: "recorded/screenshots" # Path to save extra screenshots
+  confidence: 0.7  # Confidence threshold for image matching
+  search_mode: "normal"  # Image search mode (normal or experimental)
+  action_delay: 0.5  # Delay between actions in seconds
+  mouse_move_duration: 0.5  # Duration of mouse movements
+  max_retries: 3  # Maximum number of retry attempts
+  emergency_stop_key: "esc"  # Key to trigger emergency stop
+  stop_on_failure: true  # Stop execution when an action fails
+
+# Record_demonstration.py settings
+recorder:
+  mouse_click_auto_region_key: "ctrl"  # Key for automatic region capture
+  mouse_click_manual_region_key: "shift"  # Key for manual region selection
+  output_folder: "recorded"  # Output folder for recordings
+  start_key: "f9"  # Start/stop recording key
+  stop_key: "f9"  # Same as start_key for toggle behavior
+  pause_key: "f10"  # Pause/resume recording key
+  emergency_key: "esc"  # Emergency stop key
