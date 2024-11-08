@@ -1,6 +1,7 @@
 # Auto Action py
 # By Elise Windbloom
-# Version 11 - Added far faster and higher quality image detection
+# Version 12 - Config file added and big bug fixes in recorder
+# V11 - Added far faster and higher quality image detection
 # v10 - First stable version
 import pyautogui
 import time
@@ -17,6 +18,14 @@ from PIL import Image, ImageGrab
 import os
 import subprocess
 import argparse
+import yaml
+
+def load_config(config_path="config.yaml"):
+    try:
+        with open(config_path, 'r') as file:
+            return yaml.safe_load(file)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Config file not found at {config_path}")
 
 # Configure logging
 logging.basicConfig(
@@ -42,14 +51,7 @@ class AutomationError(Exception):
     pass
 
 class PCAutomation:
-    def __init__(self, 
-                 confidence_threshold: float = 0.99,
-                 action_delay: float = 0.5,
-                 mouse_move_duration: float = 0.5,
-                 max_retries: int = 3,
-                 emergency_stop_key: str = 'esc',
-                 images_folder: str = 'images',
-                 stop_on_failure: bool = True):
+    def __init__(self, config_path="config.yaml"):
         """
         Initialize the automation framework
         
@@ -62,27 +64,35 @@ class PCAutomation:
             images_folder: Folder containing image assets
             stop_on_failure: If True, stops execution when an action fails
         """
-        self.confidence_threshold = confidence_threshold
-        self.action_delay = action_delay
-        self.mouse_move_duration = mouse_move_duration
-        self.max_retries = max_retries
-        self.emergency_stop_key = emergency_stop_key
+        # Load config
+        config = load_config(config_path)
+        autoaction_config = config.get('autoaction', {})
+
+        # Get settings from config with fallbacks
+        self.confidence_threshold = autoaction_config.get('confidence', 0.7)
+        self.images_folder = Path(autoaction_config.get('images_folder', 'actions/examples/notepad/images'))
+        self.screenshots_path = Path(autoaction_config.get('screenshots_folder',"recorded/screenshots"))
+        
+        self.search_mode = autoaction_config.get('search_mode', 'normal') #normal or experimental
+
+        self.action_delay = autoaction_config.get('action_delay',0.5)
+        self.mouse_move_duration = autoaction_config.get('mouse_move_duration',0.5)
+        self.max_retries = autoaction_config.get('max_retries',3)
+        self.emergency_stop_key = autoaction_config.get('emergency_stop_key','esc')
+        self.stop_on_failure = autoaction_config.get('stop_on_failure',True)
+
         self.running = False
         self.last_matched_region = None
-        self.images_folder = images_folder
-        self.stop_on_failure = stop_on_failure
-
-        self.search_mode = "normal" #normal or experimental
-        self.screenshots_path = Path("recorded/screenshots")
+        
         # Create folder if it doesn't exist
         self.screenshots_path.mkdir(parents=True, exist_ok=True)
         
         # Set up PyAutoGUI
-        pyautogui.PAUSE = action_delay
+        pyautogui.PAUSE = self.action_delay
         pyautogui.FAILSAFE = True
         
         # Register emergency stop
-        keyboard.on_press_key(emergency_stop_key, lambda _: self._emergency_stop())
+        keyboard.on_press_key(self.emergency_stop_key, lambda _: self._emergency_stop())
         
         # Initialize action registry
         self._init_action_registry()
@@ -999,14 +1009,7 @@ def main():
     args = parser.parse_args()
 
     # Create automation instance with custom or default paths
-    auto = PCAutomation(
-        confidence_threshold=0.8,
-        action_delay=0.5,
-        mouse_move_duration=0.5,
-        max_retries=3,
-        images_folder=args.images_path,
-        stop_on_failure=True
-    )
+    auto = PCAutomation()
     
     try:
         # Read actions from file
