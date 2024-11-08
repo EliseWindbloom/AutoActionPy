@@ -1,5 +1,6 @@
 # Auto Action py
 # By Elise Windbloom
+# Version 12.1 - Fixed custom action list argument adding
 # Version 12 - Config file added and big bug fixes in recorder
 # V11 - Added far faster and higher quality image detection
 # v10 - First stable version
@@ -19,6 +20,36 @@ import os
 import subprocess
 import argparse
 import yaml
+
+def get_default_paths(action_file: str = None, images_path: str = None) -> tuple:
+    """
+    Determine action file and images paths based on input arguments
+    Returns tuple of (action_file_path, images_folder_path)
+    """
+    # Case 1: No arguments given - use example defaults
+    if not action_file and not images_path:
+        return (
+            "actions/examples/notepad/example_action_list.txt",
+            "actions/examples/notepad/images"
+        )
+    
+    # Case 2: Action file given but no images path
+    if action_file and not images_path:
+        # Convert action_file to absolute path
+        action_file = os.path.abspath(action_file)
+        # Get directory of action file and add /images
+        action_dir = os.path.dirname(action_file)
+        images_path = os.path.join(action_dir, "images")
+        return (action_file, images_path)
+    
+    # Case 3: Both paths given
+    return (os.path.abspath(action_file), os.path.abspath(images_path))
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='AutoActionPy - Image-based automation tool')
+    parser.add_argument('action_file', nargs='?', help='Path to action list file')
+    parser.add_argument('--images_path', help='Path to folder containing image assets')
+    return parser.parse_args()
 
 def load_config(config_path="config.yaml"):
     try:
@@ -51,28 +82,37 @@ class AutomationError(Exception):
     pass
 
 class PCAutomation:
-    def __init__(self, config_path="config.yaml"):
+    def __init__(self, config_path="config.yaml", images_path=None):
         """
         Initialize the automation framework
         
         Args:
-            confidence_threshold: Minimum confidence for image matching
-            action_delay: Delay between actions in seconds
-            mouse_move_duration: Duration of mouse movements
-            max_retries: Maximum number of retry attempts
-            emergency_stop_key: Key to trigger emergency stop
-            images_folder: Folder containing image assets
-            stop_on_failure: If True, stops execution when an action fails
+            config_path: Path to config file
+            images_path: Override images folder from config
         """
+        # confidence_threshold: Minimum confidence for image matching
+        # action_delay: Delay between actions in seconds
+        # mouse_move_duration: Duration of mouse movements
+        # max_retries: Maximum number of retry attempts
+        # emergency_stop_key: Key to trigger emergency stop
+        # images_folder: Folder containing image assets
+        # stop_on_failure: If True, stops execution when an action fails
+
         # Load config
         config = load_config(config_path)
         autoaction_config = config.get('autoaction', {})
 
+        # Override images_folder if specified
+        if images_path:
+            self.images_folder = Path(images_path)
+        else:
+            self.images_folder = Path(autoaction_config.get('images_folder', 'actions/examples/notepad/images'))
+
+
         # Get settings from config with fallbacks
         self.confidence_threshold = autoaction_config.get('confidence', 0.7)
-        self.images_folder = Path(autoaction_config.get('images_folder', 'actions/examples/notepad/images'))
-        self.screenshots_path = Path(autoaction_config.get('screenshots_folder',"recorded/screenshots"))
-        
+        self.images_folder = Path(images_path if images_path else autoaction_config.get('images_folder', 'actions/examples/notepad/images'))
+        self.screenshots_path = Path(autoaction_config.get('screenshots_folder',"recorded/screenshots"))  
         self.search_mode = autoaction_config.get('search_mode', 'normal') #normal or experimental
 
         self.action_delay = autoaction_config.get('action_delay',0.5)
@@ -999,21 +1039,18 @@ class PCAutomation:
 
 # Example usage
 def main():
-    # Set up argument parser
-    parser = argparse.ArgumentParser(description='Run automated actions based on image recognition')
-    parser.add_argument('action_file', nargs='?', default='actions/examples/notepad/example_action_list.txt',
-                      help='Path to action list file (default: actions/examples/notepad/example_action_list.txt)')
-    parser.add_argument('--images_path', default='actions/examples/notepad/images',
-                      help='Path to images folder (default: actions/examples/notepad/images)')
+    # Parse command line arguments
+    args = parse_arguments()
     
-    args = parser.parse_args()
-
-    # Create automation instance with custom or default paths
-    auto = PCAutomation()
+    # Get paths based on arguments
+    action_file, images_path = get_default_paths(args.action_file, args.images_path)
+    
+    # Create automation instance with possibly overridden images path
+    auto = PCAutomation(config_path="config.yaml", images_path=images_path)
     
     try:
         # Read actions from file
-        with open(args.action_file, 'r') as f:
+        with open(action_file, 'r') as f:
             action_list = f.read()
 
         # Execute the actions
@@ -1024,7 +1061,7 @@ def main():
             logging.info(f"Action {i + 1}: {'Success' if result.success else 'Failed'} - {result.message}")
 
     except FileNotFoundError:
-        logging.error(f"File not found: {args.action_file}")
+        logging.error(f"File not found: {action_file}")
         sys.exit(1)
     except Exception as e:
         logging.error(f"Error executing actions: {str(e)}")
