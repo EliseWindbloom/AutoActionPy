@@ -14,7 +14,6 @@ You will probably have to replace the images in the example folder for this to w
 - **Three Search Modes**: Normal (precise), Advanced (uses mutliple searching tatics) and Experimental (more tolerant) image matching
 - **Manual Region Selection**: Shift-triggered manual region selection for more precise automation
 - **Action Recording**: Record mouse clicks and keyboard inputs to generate automation scripts
-- **Duplicate Detection**: Smart handling of repeated images during recording
 - **Enhanced Mouse Actions**: Support for middle-click and relative mouse movements
 - **Advanced Keyboard Support**: Handling of key combinations and special keys
 
