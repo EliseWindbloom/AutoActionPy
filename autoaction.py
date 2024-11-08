@@ -1,5 +1,6 @@
 # Auto Action py
 # By Elise Windbloom
+# Version 12.2 - allowed other added search mode, fixed wait time for recorder
 # Version 12.1 - Fixed custom action list argument adding
 # Version 12 - Config file added and big bug fixes in recorder
 # V11 - Added far faster and higher quality image detection
@@ -113,7 +114,7 @@ class PCAutomation:
         self.confidence_threshold = autoaction_config.get('confidence', 0.7)
         self.images_folder = Path(images_path if images_path else autoaction_config.get('images_folder', 'actions/examples/notepad/images'))
         self.screenshots_path = Path(autoaction_config.get('screenshots_folder',"recorded/screenshots"))  
-        self.search_mode = autoaction_config.get('search_mode', 'normal') #normal or experimental
+        self.search_mode = autoaction_config.get('search_mode', 'normal') #normal, advanced or experimental
 
         self.action_delay = autoaction_config.get('action_delay',0.5)
         self.mouse_move_duration = autoaction_config.get('mouse_move_duration',0.5)
@@ -177,11 +178,11 @@ class PCAutomation:
     
     def set_search_mode(self, mode: str) -> ActionResult:
         """
-        Set the image search mode to either 'normal' or 'experimental'
+        Set the image search mode to either 'normal', 'advanced' or 'experimental'
         """
         mode = mode.lower()
-        if mode not in ["normal", "experimental"]:
-            return ActionResult(False, f"Invalid search mode: {mode}. Use 'normal' or 'experimental'")
+        if mode not in ["normal", "advanced", "experimental"]:
+            return ActionResult(False, f"Invalid search mode: {mode}. Use 'normal', 'advanced', 'experimental'")
             
         self.search_mode = mode
         return ActionResult(True, f"Search mode set to: {mode}")
@@ -194,6 +195,8 @@ class PCAutomation:
             #selects which function to use based on current search mode
             if self.search_mode == "experimental":
                 return self._find_image_experimental(template_path,region,confidence)
+            elif self.search_mode == "advanced":
+                return self._find_image_advanced(template_path,region,confidence)
             return self._find_image_normal(template_path,region,confidence)
 
 
@@ -248,7 +251,7 @@ class PCAutomation:
             return ActionResult(False, f"Error in template matching: {str(e)}")
 
 
-    def _find_image_unused_original(self,
+    def _find_image_advanced(self,
                     template_path: str,
                     region: Optional[Tuple[int, int, int, int]] = None,
                     confidence: Optional[float] = None) -> ActionResult:
