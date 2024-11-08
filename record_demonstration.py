@@ -1,6 +1,6 @@
 # Record Demonstration py
 # Made by Elise Windbloom
-# Version 12
+# Version 12.2
 import keyboard
 import pyautogui
 import time
@@ -415,6 +415,9 @@ class DemonstrationRecorder:
         try:
             if self.start_x is None or self.start_y is None:
                 return
+            
+            # Capture timestamp BEFORE processing the region
+            current_time = time.time()
 
             x1 = min(self.start_x, event.x)
             y1 = min(self.start_y, event.y)
@@ -425,7 +428,7 @@ class DemonstrationRecorder:
             region = screen[y1:y2, x1:x2]
             
             # Create capture with manual crop flag
-            self._create_capture(region, original_pos[0], original_pos[1], "left", True)
+            self._create_capture(region, original_pos[0], original_pos[1], "left", True, timestamp=current_time)
             
             # For manual region captures, add extra delay and focus handling
             #time.sleep(0.5)  # Allow time for tkinter window to fully close
@@ -466,10 +469,12 @@ class DemonstrationRecorder:
         pass
         
     def _capture_click(self, x: int, y: int, button: str):
+        # Capture timestamp immediately at start
+        current_time = time.time()
+
         # Flush any pending keyboard input first if receives sudden mouse click
         if self.current_keys:
             self._flush_key_sequence(self.sequence_start_time)
-        current_time = time.time()  # Capture timestamp immediately
         
         # Store original mouse position
         original_pos = pyautogui.position()
@@ -584,7 +589,7 @@ class DemonstrationRecorder:
         return best_region or (max(0, x - 75), max(0, y - 75), 150, 150)
 
         
-    def _create_capture(self, image, x, y, button, is_manual=False):
+    def _create_capture(self, image, x, y, button, is_manual=False, timestamp=None):
         """Create a new capture entry and save image immediately"""
         self.screenshot_counter += 1
         filename = f"click_{self.screenshot_counter}_{button}.png"
@@ -600,7 +605,7 @@ class DemonstrationRecorder:
             mouse_y=y,
             button=button,
             filename=filename,
-            timestamp=time.time(),
+            timestamp=timestamp or time.time(),  # Use provided timestamp or current time
             is_manually_cropped=is_manual
         ))
 
@@ -645,7 +650,7 @@ class DemonstrationRecorder:
             # Add wait if significant pause (>= 0.5 seconds)
             if wait_time >= self.key_buffer_timeout:
                 if wait_time > 4:
-                    wait_time -= 3 #reduce wait time due to delay from screenshot taking
+                    wait_time -= 3 #reduce wait time due to make a bit faster
                 #actions.append(f"wait {wait_time:.1f}")
                 wait_time_rounded = max(1, math.floor(wait_time)) #round down to nearest whole number, min=1
                 actions.append(f"wait {wait_time_rounded}")
