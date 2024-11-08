@@ -36,11 +36,11 @@ python autoaction.py
 
 To run with your own action file:  
   1. Create an action list file (e.g., my_actions.txt) with your automation commands
-  2. Run this command in command line:
+  2. Run this command in command line (it will automatically look for a subfolder named "images" in the same location as the text file):
 ```
 python autoaction.py my_actions.txt
 ```  
-  - You can also set the folder to look for images in:
+  - You can also set the folder to look for images in (it will use the folder given to find the images):
 ```
 python autoaction.py my_actions.txt --images_path path/to/images/folder
 ```
