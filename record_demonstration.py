@@ -238,7 +238,7 @@ class DemonstrationRecorder:
         try:
             self._process_captures()  # Now just verifies files exist
             self._generate_action_list()
-            logging.info("Recording processed and saved successfully")
+            logging.info(f"Recording processed and saved successfully to: {self.current_session_folder}")
         except Exception as e:
             logging.error(f"Error processing recording: {str(e)}")
 
