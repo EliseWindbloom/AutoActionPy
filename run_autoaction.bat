@@ -1,3 +1,5 @@
+cd "C:\Users\lyria\Documents\Scripts\python\automation\auto\"
+
 @echo off
 call venv\Scripts\activate.bat
 
@@ -11,6 +13,8 @@ if /i not "%file:~-4%"==".txt" (
     exit /b
 )
 echo Selected file is: "%file%"
+timeout /t 5 /nobreak
+
 python autoaction.py "%file%"
 pause
 exit /b
