@@ -1,6 +1,7 @@
 # Auto Action py
 # By Elise Windbloom
-# Version 12.2 - allowed other added search mode, fixed wait time for recorder
+# Version 14 - added wait_file (with %LAST% variables) and type_file
+# Version 13 - allowed other added search mode, fixed wait time for recorder
 # Version 12.1 - Fixed custom action list argument adding
 # Version 12 - Config file added and big bug fixes in recorder
 # V11 - Added far faster and higher quality image detection
@@ -21,6 +22,7 @@ import os
 import subprocess
 import argparse
 import yaml
+import fnmatch
 
 def get_default_paths(action_file: str = None, images_path: str = None) -> tuple:
     """
@@ -124,6 +126,8 @@ class PCAutomation:
 
         self.running = False
         self.last_matched_region = None
+        self.last_filename = None
+        self.last_filepath = None
         
         # Create folder if it doesn't exist
         self.screenshots_path.mkdir(parents=True, exist_ok=True)
@@ -149,8 +153,10 @@ class PCAutomation:
             'click_middle': lambda *args: self.click(*args, button="middle"),
             'click_double': lambda *args: self.click(*args, button="double"),
             'type': self.type_text,
+            'type_file': self.type_file,
             'check_state': self.check_state,
             'wait': self.wait,
+            'wait_file': self.wait_file,
             'press_key': self.press_key,
             'drag_to': self.drag_to,
             'drag_between': self.drag_between,
@@ -713,9 +719,10 @@ class PCAutomation:
 
     def type_text(self, text: str) -> ActionResult:
         """
-        Type text with support for key combinations
+        Type text with support for key combinations and variables
         Format for key combinations: Use curly braces like '{ctrl+m}' or '{ctrl+shift+a}'
         Regular text outside braces will be typed normally
+        Variables: %LAST_FILENAME%, %LAST_FILEPATH%, %LAST_SUCCESS%, %LAST_X%, %LAST_Y%, %LAST_MESSAGE%
         
         Examples:
             type "The ctrl key"  # Types the word "ctrl"
@@ -723,6 +730,19 @@ class PCAutomation:
             type "Press {ctrl+c} to copy"  # Types "Press " then presses ctrl+c then types " to copy"
         """
         try:
+            # Replace variables first
+            replacements = {
+                '%LAST_FILENAME%': str(self.last_filename) if self.last_filename else '',
+                '%LAST_FILEPATH%': str(self.last_filepath) if self.last_filepath else '',
+                '%LAST_SUCCESS%': str(self.last_result.success if hasattr(self, 'last_result') else ''),
+                '%LAST_X%': str(self.last_result.location[0] if hasattr(self, 'last_result') and self.last_result.location else ''),
+                '%LAST_Y%': str(self.last_result.location[1] if hasattr(self, 'last_result') and self.last_result.location else ''),
+                '%LAST_MESSAGE%': str(self.last_result.message if hasattr(self, 'last_result') else '')
+            }
+            
+            for var, value in replacements.items():
+                text = text.replace(var, value)
+                
             # Split text into regular text and key combinations
             parts = re.split(r'({[^}]+})', text)
             
@@ -738,6 +758,26 @@ class PCAutomation:
             return ActionResult(True, f"Typed text: {text}")
         except Exception as e:
             return ActionResult(False, f"Failed to type text: {str(e)}")
+        
+    def type_file(self, filepath: str) -> ActionResult:
+        """
+        Read and type the contents of a text file
+        Args:
+            filepath: Path to the text file to read and type
+        """
+        try:
+            # Read the file
+            with open(filepath, 'r', encoding='utf-8') as file:
+                content = file.read()
+                
+            # Use existing type_text method to handle the content
+            # This ensures we maintain support for key combinations and variables
+            return self.type_text(content)
+            
+        except FileNotFoundError:
+            return ActionResult(False, f"File not found: {filepath}")
+        except Exception as e:
+            return ActionResult(False, f"Failed to type file contents: {str(e)}")
 
     def check_state(self, image_path: str) -> ActionResult:
         """Check if an image exists on screen"""
@@ -798,6 +838,65 @@ class PCAutomation:
         """Wait for specified seconds"""
         time.sleep(seconds)
         return ActionResult(True, f"Waited for {seconds} seconds")
+    
+    def wait_file(self, path_pattern: str, timeout: float = 30) -> ActionResult:
+        """
+        Wait for file changes/creation in a directory with optional file type filtering
+        
+        Args:
+            path_pattern: Path with optional wildcard (e.g. "C:/path/*.wav" or "C:/path")
+            timeout: Maximum time to wait in seconds
+        """
+        try:
+            # Split path and pattern
+            if '*' in path_pattern:
+                directory = os.path.dirname(path_pattern)
+                pattern = os.path.basename(path_pattern)
+            else:
+                directory = path_pattern
+                pattern = '*'
+                
+            if not os.path.exists(directory):
+                return ActionResult(False, f"Directory not found: {directory}")
+                
+            # Get initial state
+            initial_files = {}
+            for f in os.listdir(directory):
+                if fnmatch.fnmatch(f, pattern):
+                    path = os.path.join(directory, f)
+                    initial_files[f] = os.path.getmtime(path)
+                    
+            start_time = time.time()
+            
+            while time.time() - start_time < timeout:
+                time.sleep(0.1)  # Reduce CPU usage
+                
+                # Check for changes
+                current_files = {}
+                for f in os.listdir(directory):
+                    if fnmatch.fnmatch(f, pattern):
+                        path = os.path.join(directory, f)
+                        current_files[f] = os.path.getmtime(path)
+                        
+                        # Check if file is new or modified
+                        if (f not in initial_files or 
+                            current_files[f] > initial_files[f]):
+                            
+                            self.last_filename = f
+                            self.last_filepath = path
+                            return ActionResult(
+                                True,
+                                f"File changed/created: {f}",
+                                additional_data={
+                                    'filename': f,
+                                    'filepath': path
+                                }
+                            )
+                            
+            return ActionResult(False, "Timeout waiting for file changes")
+            
+        except Exception as e:
+            return ActionResult(False, f"Error monitoring files: {str(e)}")
     
     def run_program(self, path: str, *args) -> ActionResult:
         """
