@@ -1,6 +1,6 @@
 # Record Demonstration py
 # Made by Elise Windbloom
-# Version 11
+# Version 12
 import keyboard
 import pyautogui
 import time
@@ -19,7 +19,15 @@ from pynput import mouse
 import win32gui
 import win32con
 import win32api
+import yaml
+import math
 
+def load_config(config_path="config.yaml"):
+    try:
+        with open(config_path, 'r') as file:
+            return yaml.safe_load(file)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Config file not found at {config_path}")
 
 # Configure logging
 logging.basicConfig(
@@ -49,22 +57,21 @@ class KeyAction:
     timestamp: float
 
 class DemonstrationRecorder:
-    def __init__(self, 
-                 output_folder: str = "recorded",
-                 start_key: str = "f9",
-                 stop_key: str = "f9",
-                 pause_key: str = "f10",
-                 emergency_key: str = "esc",
-                 mouse_left_trigger: str = "ctrl",
-                 mouse_left_trigger_manual: str = "shift"):
+    def __init__(self, config_path="config.yaml"):
         """Initialize the demonstration recorder"""
-        self.output_folder = Path(output_folder)
-        self.images_folder = self.output_folder / "images"
-        self.start_key = start_key
-        self.stop_key = stop_key
-        self.emergency_key = emergency_key
-        self.mouse_left_trigger = mouse_left_trigger
-        self.mouse_left_trigger_manual = mouse_left_trigger_manual
+        # Load config
+        config = load_config(config_path)
+        recorder_config = config.get('recorder', {})
+
+        self.output_folder = Path(recorder_config.get('output_folder', 'recorded'))
+        self.start_key = recorder_config.get('start_key', 'f9')
+        self.stop_key = recorder_config.get('stop_key', 'f9')
+        self.pause_key = recorder_config.get('pause_key', 'f10')
+        self.emergency_key = recorder_config.get('emergency_key', 'esc')
+        self.mouse_left_trigger = recorder_config.get('mouse_click_auto_region_key', 'ctrl')
+        self.mouse_left_trigger_manual = recorder_config.get('mouse_click_manual_region_key', 'shift')
+        
+        self.images_folder = ""
         self.running = False
         self.keyboard_hooks = []
         self.current_keyboard_hook = None
@@ -79,21 +86,17 @@ class DemonstrationRecorder:
         
         # Create output folders
         self.output_folder.mkdir(parents=True, exist_ok=True)
-        #self.images_folder.mkdir(parents=True, exist_ok=True)
         
         # Initialize screenshot counter
         self.screenshot_counter = 0
 
-        self.pause_key = pause_key
+        self.pause_key = self.pause_key
         self.is_paused = False
         self.mouse_listener = None
         self.keyboard_buffer = []
         self.last_key_time = 0
         self.key_buffer_timeout = 3.0  # seconds
         self.sequence_start_time = None
-        
-        # For duplicate detection
-        self.image_hashes = set()
 
         # For manual screenshot from selected region
         self.root = None
@@ -185,14 +188,13 @@ class DemonstrationRecorder:
         self.captures.clear()
         self.key_actions.clear()
         self.current_keys.clear()
-        self.image_hashes.clear()
 
         # Create new session folder
         self.current_session_folder = self._create_recording_folder()
         
         # Store the hook so we can remove it later
         self.current_keyboard_hook = keyboard.on_press(self._on_key_event)
-        keyboard.on_press_key(self.mouse_left_trigger, self._on_ctrl_press)
+        self.current_mouse_trigger_hook = keyboard.on_press_key(self.mouse_left_trigger, self._on_ctrl_press)
         
         # Mouse position listener
         self.mouse_listener = mouse.Listener(
@@ -219,9 +221,14 @@ class DemonstrationRecorder:
             self.mouse_listener.stop()
             self.mouse_listener = None
 
+        # Unhook both keyboard handlers
         if self.current_keyboard_hook:
             keyboard.unhook(self.current_keyboard_hook)
             self.current_keyboard_hook = None
+            
+        if self.current_mouse_trigger_hook:
+            keyboard.unhook(self.current_mouse_trigger_hook)
+            self.current_mouse_trigger_hook = None
         
         # Flush any remaining key sequence
         self._flush_key_sequence()
@@ -229,7 +236,7 @@ class DemonstrationRecorder:
         logging.info("Recording stopped, processing results...")
         
         try:
-            self._process_captures()
+            self._process_captures()  # Now just verifies files exist
             self._generate_action_list()
             logging.info("Recording processed and saved successfully")
         except Exception as e:
@@ -463,14 +470,15 @@ class DemonstrationRecorder:
         if self.current_keys:
             self._flush_key_sequence(self.sequence_start_time)
         current_time = time.time()  # Capture timestamp immediately
+        
         # Store original mouse position
         original_pos = pyautogui.position()
         screen_size = pyautogui.size()
         
         try:
             # Move mouse out of the way
-            safe_x = screen_size[0] - 10
-            safe_y = screen_size[1] - 10
+            safe_x = screen_size[0] - 20
+            safe_y = screen_size[1] - 20
             pyautogui.moveTo(safe_x, safe_y, duration=0)
             
             time.sleep(1)
@@ -478,35 +486,43 @@ class DemonstrationRecorder:
             # Take screenshot
             screen = np.array(ImageGrab.grab())
             
-            # Calculate image hash
-            img_hash = self._calculate_image_hash(screen)
-            
             # Generate filename
             self.screenshot_counter += 1
             filename = f"click_{self.screenshot_counter}_{button}.png"
             
-            # Handle duplicate detection
-            if img_hash in self.image_hashes:
-                logging.info("Reusing existing image")
-                for existing_capture in self.captures:
-                    if self._calculate_image_hash(existing_capture.image) == img_hash:
-                        filename = existing_capture.filename
-                        break
-            else:
-                self.image_hashes.add(img_hash)
-                
-            # Store capture data with current timestamp
-            self.captures.append(ScreenCapture(
+            # Find and crop region immediately
+            region = self._find_unique_region(ScreenCapture(
                 image=screen,
                 mouse_x=x,
                 mouse_y=y,
                 button=button,
                 filename=filename,
-                timestamp=current_time  # Use current timestamp
+                timestamp=current_time
             ))
             
-            # Update last action time after everything is done
-            self.last_action_time = current_time  # Move this here
+            # Crop the image
+            cropped = screen[
+                region[1]:region[1]+region[3],
+                region[0]:region[0]+region[2]
+            ]
+            
+            # Save cropped image immediately
+            img_pil = Image.fromarray(cropped)
+            img_path = str(self.images_folder / filename)
+            img_pil.save(img_path, 'PNG', optimize=True)
+            
+            # Store capture data with cropped image
+            self.captures.append(ScreenCapture(
+                image=cropped,  # Store cropped version
+                mouse_x=x,
+                mouse_y=y,
+                button=button,
+                filename=filename,
+                timestamp=current_time
+            ))
+            
+            # Update last action time
+            self.last_action_time = current_time
             
             # Restore position and click
             pyautogui.moveTo(x, y, duration=0)
@@ -569,9 +585,14 @@ class DemonstrationRecorder:
 
         
     def _create_capture(self, image, x, y, button, is_manual=False):
-        """Create a new capture entry"""
+        """Create a new capture entry and save image immediately"""
         self.screenshot_counter += 1
         filename = f"click_{self.screenshot_counter}_{button}.png"
+        
+        # Save image immediately
+        img_pil = Image.fromarray(image)
+        img_path = str(self.images_folder / filename)
+        img_pil.save(img_path, 'PNG', optimize=True)
         
         self.captures.append(ScreenCapture(
             image=image,
@@ -584,33 +605,20 @@ class DemonstrationRecorder:
         ))
 
     def _process_captures(self):
-        """Modified to respect manual cropping flag"""
+        """Verify all captures were saved correctly"""
         processed_captures = []
         
         for capture in self.captures:
             try:
-                if not capture.is_manually_cropped:
-                    # Find unique region only for automatic captures
-                    region = self._find_unique_region(capture)
-                    cropped = capture.image[
-                        region[1]:region[1]+region[3],
-                        region[0]:region[0]+region[2]
-                    ]
+                img_path = self.images_folder / capture.filename
+                if img_path.exists():
+                    processed_captures.append(capture)
                 else:
-                    # Use the manually selected region as-is
-                    cropped = capture.image
-
-                # Save image
-                img_pil = Image.fromarray(cropped)
-                img_path = str(self.images_folder / capture.filename)
-                img_pil.save(img_path, 'PNG', optimize=True)
-                
-                processed_captures.append(capture)
-                
+                    logging.error(f"Missing image file for capture: {capture.filename}")
             except Exception as e:
                 logging.error(f"Error processing capture {capture.filename}: {str(e)}")
                 continue
-                
+                    
         self.captures = processed_captures
         
     def _generate_action_list(self):
@@ -636,7 +644,12 @@ class DemonstrationRecorder:
             
             # Add wait if significant pause (>= 0.5 seconds)
             if wait_time >= self.key_buffer_timeout:
-                actions.append(f"wait {wait_time:.1f}")
+                if wait_time > 3:
+                    wait_time -= 2 #reduce wait time due to delay from screenshot taking
+                #actions.append(f"wait {wait_time:.1f}")
+                wait_time_rounded = max(1, math.floor(wait_time)) #round down to nearest whole number, min=1
+                actions.append(f"wait {wait_time_rounded}")
+                
                 
             # Add action with appropriate formatting
             if action_type == 'click':
