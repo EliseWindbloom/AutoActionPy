@@ -24,7 +24,8 @@ Run these commands in command line to install:
 ```
 python -m venv venv
 call venv\Scripts\activate.bat
-pip install pyautogui pillow opencv-python keyboard numpy pyyaml 
+pip install pyautogui pillow opencv-python keyboard numpy pyyaml
+pip install pynput pywin32
 ```
 
 ## 📝 Usage
