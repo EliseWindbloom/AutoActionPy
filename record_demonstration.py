@@ -644,8 +644,8 @@ class DemonstrationRecorder:
             
             # Add wait if significant pause (>= 0.5 seconds)
             if wait_time >= self.key_buffer_timeout:
-                if wait_time > 3:
-                    wait_time -= 2 #reduce wait time due to delay from screenshot taking
+                if wait_time > 4:
+                    wait_time -= 3 #reduce wait time due to delay from screenshot taking
                 #actions.append(f"wait {wait_time:.1f}")
                 wait_time_rounded = max(1, math.floor(wait_time)) #round down to nearest whole number, min=1
                 actions.append(f"wait {wait_time_rounded}")
