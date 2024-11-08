@@ -20,7 +20,7 @@ You will probably have to replace the images in the example folder for this to w
 
 ## 🚀 Installation
 
-Run these commands in command line to install:
+Either run `install.bat` or use these commands in command line to install:
 ```
 python -m venv venv
 call venv\Scripts\activate.bat
