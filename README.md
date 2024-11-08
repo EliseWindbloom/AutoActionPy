@@ -77,7 +77,9 @@ click btn_save.png
 - `double_click [image]` - Move to and Double click (with left mouse button) on image, use current position if no image given
 - `wait <image> [timeout]` - Wait for image to appear
 - `wait <seconds>` - Wait for specified seconds
+- `wait_file "path/to/folder/*.filetype" [timeout]` - Wait for a file to change/be created in a folder (can be given as a folder path, with optional filetype wildcard or a specific file)
 - `type "text"` - Type text (supports {key} combinations)
+- `type_file "filename.txt"` - Type the contents of a text file (supports {key} combinations)
 - `move_to <image>` - Move mouse to image
 - `move_to <x> <y>` - Move mouse to x and/or y position, use +/- to make relative like `move_to +10 -5`
 - `move_between <image1> <image2> [percentage]` - Move to point between two images
