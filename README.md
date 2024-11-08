@@ -128,7 +128,7 @@ Note:
 3. Reference images in your action list by filename.
 
 ## 💡 Tips
-
+- Edit the `config.yaml` to change settings such as the default left mouse click keys for recording (SHIFT and CTRL by default)
 - `search_mode` is always normal by default and is recommended, but you can try `search_mode experimental` which tries mutliple search methods but is more likely to fail/get false positives
 - Manual region selection (SHIFT) allows you to select the region of the screenshot you want by drawing a rectangle
 - Key combinations can be typed using {key} format: {ctrl+c}, {shift+tab}
