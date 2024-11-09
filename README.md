@@ -110,7 +110,7 @@ click btn_save.png
    3) `%LAST_Y%` - last mouse y  
    4) `%LAST_MESSAGE%` - last message sent  
    5) `%LAST_FILENAME%` - filename of last file `wait_file` waited for  
-   6) `%LAST_FILEPATH%` - filepath to last file `wait_file` waited
+   6) `%LAST_FILEPATH%` - filepath to last file `wait_file` waited for
 </details>
 
 
