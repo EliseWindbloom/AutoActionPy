@@ -1,6 +1,6 @@
 # AutoAction.py settings
 autoaction:
-  images_folder: "actions/examples/notepad/images" # Path to image folder for custom action lists
+  images_folder: "actions/examples/notepad/images" # Path to image folder for custom action lists (ignored when you use autoaction.py with a custom textfile)
   screenshots_folder: "recorded/screenshots" # Path to save extra screenshots
   confidence: 0.7  # Confidence threshold for image matching
   search_mode: "normal"  # Image search mode (normal, advanced or experimental)
