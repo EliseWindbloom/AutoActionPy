@@ -80,7 +80,7 @@ click btn_save.png
 - `type "text"` - Type text (supports {key} combinations)
 - `type_file "filename.txt"` - Type the contents of a text file (supports {key} combinations)
 - `move_to <image>` - Move mouse to image
-- `move_to <x> <y>` - Move mouse to x and/or y position, use +/- to make relative like `move_to +10 -5`
+- `move_to <xNUMBER> <yNUMBER>` - Move mouse to x and/or y position, use +/- to make relative like `move_to x+10 y-5`
 - `move_between <image1> <image2> [percentage]` - Move to point between two images
 - `drag_to <image>` - Drag from current position to image
 - `drag_between <image1> <image2> [percentage]` - Drag between two images
