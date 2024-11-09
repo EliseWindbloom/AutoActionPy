@@ -103,7 +103,7 @@ click btn_save.png
 </details>
      
 <details>
-  <summary>There are 6 special variables that you can used by any action (click to expand)</summary>
+  <summary>There are 6 special variables that you can use with any action (click to expand)</summary>
   
    1) `%LAST_SUCCESS%` - states if last action was successful (true/false)  
    2) `%LAST_X%` - last mouse x  
